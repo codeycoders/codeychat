@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CodeyChat</string>
+    <string name="title_activity_chats">ChatsActivity</string>
+</resources>

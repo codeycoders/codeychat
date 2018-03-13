@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "531033258195",
+    "firebase_url": "https://codeychat-20d66.firebaseio.com",
+    "project_id": "codeychat-20d66",
+    "storage_bucket": "codeychat-20d66.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:531033258195:android:3286893e67fb34f7",
+        "android_client_info": {
+          "package_name": "com.tejasmehta.codeychat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "531033258195-1ka0falo3qs39cgg34l8jpfh2u65hjno.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tejasmehta.codeychat",
+            "certificate_hash": "50237cdc3bfe196185feba26281c23d46e5aac7e"
+          }
+        },
+        {
+          "client_id": "531033258195-0labb1sac4lsjpic6c8a5jrjs8107ha2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1TzNw3NkLkm8-IGWxPGEW5eLi73R6L3A"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "531033258195-0labb1sac4lsjpic6c8a5jrjs8107ha2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
