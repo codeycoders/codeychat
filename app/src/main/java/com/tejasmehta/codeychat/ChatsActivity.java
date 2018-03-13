@@ -19,6 +19,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.NotificationCompat;
@@ -32,6 +33,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
@@ -47,6 +49,9 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -95,6 +100,8 @@ public class ChatsActivity extends AbstractActivity {
     Map<String, String> groupToName;
     int clickCnt = 0;
     ValueEventListener mListener;
+    private AdView mAdView;
+    CoordinatorLayout cl;
 
 
 
@@ -129,6 +136,7 @@ public class ChatsActivity extends AbstractActivity {
         fabPassJ.hide();
         groupToName = new HashMap<>();
         listView.setDivider(null);
+        cl = findViewById(R.id.cl);
 
 
         try {
@@ -140,6 +148,14 @@ public class ChatsActivity extends AbstractActivity {
 
 
         Log.i("Token", token);
+
+        MobileAds.initialize(this, "ca-app-pub-3858453173804119~8679926603");
+
+        AdView adView = new AdView(this);
+        adView.setAdUnitId("ca-app-pub-3858453173804119/1398959114");
+        mAdView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
 
 
         host.setup();
@@ -166,7 +182,15 @@ public class ChatsActivity extends AbstractActivity {
             @Override
             public void onClick(View view) {
 
+                if (tab == 2) {
+
                     startActivity(new Intent(getApplicationContext(), UserGroupSeachActivity.class));
+
+                } else {
+
+
+
+                }
 
             }
         });
@@ -974,6 +998,8 @@ public class ChatsActivity extends AbstractActivity {
 
     public void GroupChat() {
 
+        mAdView.setVisibility(View.VISIBLE);
+
         fab.show();
         fabPassJ.show();
         tab = 2;
@@ -985,6 +1011,11 @@ public class ChatsActivity extends AbstractActivity {
                 groupList.setSelection(groupAdapter.getCount() - 1);
             }
         });
+
+
+        RelativeLayout.LayoutParams params= new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
+        params.addRule(RelativeLayout.ABOVE, R.id.adView);
+        cl.setLayoutParams(params);
 
         if (mAuth.getCurrentUser() != null) {
 
@@ -1279,6 +1310,8 @@ public class ChatsActivity extends AbstractActivity {
             }
         });
         tab = 3;
+
+        mAdView.setVisibility(View.GONE);
 
         if (mAuth.getCurrentUser() != null) {
 

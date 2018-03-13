@@ -58,7 +58,13 @@
                         <ListView
                             android:id="@+id/listGroup"
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent" />
+                            android:layout_height="0dp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintLeft_toLeftOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+
+
                     </android.support.constraint.ConstraintLayout>
                 </LinearLayout>
 
@@ -76,9 +82,9 @@
                             android:id="@+id/list"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
+                            android:clickable="false"
                             app:layout_constraintBottom_toTopOf="@+id/button6"
-                            app:layout_constraintTop_toTopOf="parent"
-                            android:clickable="false"/>
+                            app:layout_constraintTop_toTopOf="parent" />
 
                         <EditText
                             android:id="@+id/editText8"

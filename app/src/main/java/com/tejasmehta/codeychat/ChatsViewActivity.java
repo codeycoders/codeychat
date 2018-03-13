@@ -880,8 +880,6 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
-                                                                                objects.add(Integer.parseInt(String.valueOf(countOfChats)) + 1, chat);
-
 
                                                                             }
 
@@ -1014,13 +1012,13 @@ public class ChatsViewActivity extends AppCompatActivity {
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
                                                                                                 chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(customAdapter.getCount(), chat);
+                                                                                                objects.add(chat);
 
 
                                                                                             } else {
 
                                                                                                 chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(customAdapter.getCount(), chat);
+                                                                                                objects.add(chat);
 
 
                                                                                             }
@@ -1028,7 +1026,7 @@ public class ChatsViewActivity extends AppCompatActivity {
                                                                                         } else {
 
                                                                                             chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                            objects.add(customAdapter.getCount(), chat);
+                                                                                            objects.add(chat);
 
 
                                                                                         }
@@ -1067,12 +1065,12 @@ public class ChatsViewActivity extends AppCompatActivity {
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
                                                                                                 chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(customAdapter.getCount(), chat);
+                                                                                                objects.add(chat);
 
                                                                                             } else {
 
                                                                                                 chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(customAdapter.getCount(), chat);
+                                                                                                objects.add(chat);
 
 
                                                                                             }
@@ -1080,7 +1078,7 @@ public class ChatsViewActivity extends AppCompatActivity {
                                                                                         } else {
 
                                                                                             chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                            objects.add(customAdapter.getCount(), chat);
+                                                                                            objects.add(chat);
 
 
                                                                                         }
@@ -1131,19 +1129,19 @@ public class ChatsViewActivity extends AppCompatActivity {
                                                                                         if (filterCheck(finalM.toLowerCase())) {
 
                                                                                             chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                            objects.add(customAdapter.getCount(), chat);
+                                                                                            objects.add(chat);
 
                                                                                         } else {
 
                                                                                             chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                                            objects.add(customAdapter.getCount(), chat);
+                                                                                            objects.add(chat);
 
                                                                                         }
 
                                                                                     } else {
 
                                                                                         chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                        objects.add(customAdapter.getCount(), chat);
+                                                                                        objects.add(chat);
 
 
                                                                                     }
