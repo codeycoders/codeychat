@@ -47,7 +47,8 @@
 
         <activity android:name=".UserGroupSeachActivity" />
         <activity android:name=".FinalGroupChooseActivity" />
-        <activity android:name=".ChatsViewActivity"></activity>
+        <activity android:name=".ChatsViewActivity" />
+        <activity android:name=".PassJoin"></activity>
     </application>
 
 </manifest>

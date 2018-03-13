@@ -34,6 +34,7 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
     Button createG;
     FirebaseAuth mAuth;
     DatabaseReference mDatabase;
+    Boolean groupN = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,46 +100,87 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
                                 final Long countOfGrp = dataSnapshot.getValue(Long.class);
                                 if (countOfGrp != null) {
 
-                                    mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                        @Override
-                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                    for (int i = 1; i <= countOfGrp; i++) {
 
-                                            String username = dataSnapshot.getValue(String.class);
-                                            if (username != null) {
+                                        final int num = i;
 
-                                                int newCnt = Integer.parseInt(String.valueOf(countOfGrp)) + 1;
+                                        mDatabase.child("chat").child("groups").child("group" + i).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                            @Override
+                                            public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                mDatabase.child("chat").child("groups").child("count").setValue(newCnt);
-                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("name").setValue(name);
-                                                try {
-                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("password").setValue(sha256(groupPass.getText().toString()));
-                                                } catch (NoSuchAlgorithmException e) {
-                                                    e.printStackTrace();
-                                                } catch (UnsupportedEncodingException e) {
-                                                    e.printStackTrace();
+                                                String grpNme  = dataSnapshot.getValue(String.class);
+                                                if (grpNme != null) {
+
+                                                    if (name.equals(grpNme) && num == countOfGrp || groupN) {
+
+                                                        Toast.makeText(FinalGroupChooseActivity.this, "Group Name already in Use", Toast.LENGTH_SHORT).show();
+
+                                                    } else if (!name.equals(grpNme) && num == countOfGrp) {
+
+                                                        mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                String username = dataSnapshot.getValue(String.class);
+                                                                if (username != null) {
+
+                                                                    int newCnt = Integer.parseInt(String.valueOf(countOfGrp)) + 1;
+
+                                                                    mDatabase.child("chat").child("groups").child("count").setValue(newCnt);
+                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("name").setValue(name);
+                                                                    try {
+                                                                        mDatabase.child("chat").child("groups").child("group" + newCnt).child("password").setValue(sha256(groupPass.getText().toString()));
+                                                                    } catch (NoSuchAlgorithmException e) {
+                                                                        e.printStackTrace();
+                                                                    } catch (UnsupportedEncodingException e) {
+                                                                        e.printStackTrace();
+                                                                    }
+                                                                    for (int i = 0; i < (split.length - 1); i++) {
+
+                                                                        mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i].replace(" ", ""));
+
+                                                                    }
+                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("admin").setValue(username);
+                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("pplCnt").setValue(split.length - 1);
+
+
+                                                                    Intent nextAct = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                    nextAct.putExtra("tab", "2");
+                                                                    startActivity(nextAct);
+
+                                                                }
+
+                                                            }
+
+                                                            @Override
+                                                            public void onCancelled(DatabaseError databaseError) {
+
+                                                            }
+                                                        });
+
+
+                                                    } else if (name.equals(grpNme)) {
+
+                                                        groupN = true;
+
+                                                    } else {
+
+
+
+                                                    }
+
                                                 }
-                                                for (int i = 0; i < (split.length - i); i++) {
-
-                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i]);
-
-                                                }
-                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("admin").setValue(username);
-
-
-
-                                                Intent nextAct = new Intent(getApplicationContext(), ChatsActivity.class);
-                                                nextAct.putExtra("tab", "2");
-                                                startActivity(nextAct);
 
                                             }
 
-                                        }
+                                            @Override
+                                            public void onCancelled(DatabaseError databaseError) {
 
-                                        @Override
-                                        public void onCancelled(DatabaseError databaseError) {
+                                            }
+                                        });
 
-                                        }
-                                    });
+                                    }
+
 
 
 
@@ -162,12 +204,13 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
                                                 } catch (UnsupportedEncodingException e) {
                                                     e.printStackTrace();
                                                 }
-                                                for (int i = 0; i < (split.length - i); i++) {
+                                                for (int i = 0; i < (split.length - 1); i++) {
 
-                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i]);
+                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i].replace(" ", ""));
 
                                                 }
                                                 mDatabase.child("chat").child("groups").child("group" + newCnt).child("admin").setValue(username);
+                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("pplCnt").setValue(split.length - 1);
 
 
 

@@ -214,7 +214,7 @@ public class ChatsActivity extends AbstractActivity {
             if (extraVal.equals("3")) {
 
                 host.setCurrentTab(count - 1);
-                PublicChat();
+                PublicTest();
 
             } else if (extraVal.equals("2")) {
 
@@ -869,7 +869,7 @@ public class ChatsActivity extends AbstractActivity {
 
                 } else if (s.equals("PublicChat")) {
 
-                    PublicChat();
+                    PublicTest();
                     tab = 3;
 
                 }
@@ -1291,13 +1291,12 @@ public class ChatsActivity extends AbstractActivity {
                 }
             });
 
-
-
         }
 
     }
 
-    public void PublicChat() {
+    public void PublicTest() {
+
         objects.clear();
         fab.hide();
         fabPassJ.hide();
@@ -1316,6 +1315,7 @@ public class ChatsActivity extends AbstractActivity {
         if (mAuth.getCurrentUser() != null) {
 
             final String uid = mAuth.getCurrentUser().getUid();
+            String email = mAuth.getCurrentUser().getEmail().replace(".", ",");
 
             mDatabase.child("users").child(uid).child("filter").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
@@ -1352,93 +1352,433 @@ public class ChatsActivity extends AbstractActivity {
                 }
             });
 
-            mDatabase.child("chat").child("publicDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+            mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
 
-                    final Long count = dataSnapshot.getValue(Long.class);
-                    if (count != null) {
-
-                        if (start) {
-
-                            mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                    final String username = dataSnapshot.getValue(String.class);
-                                    if (username != null) {
-
-                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                        final String timeComp = time_format.format(Calendar.getInstance().getTime());
-
-                                        mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                            @Override
-                                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                                String lastMsg = dataSnapshot.getValue(String.class);
-                                                if (lastMsg != null) {
-
-                                                    int msgs = Integer.parseInt(String.valueOf(count)) + 1;
-
-                                                    mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + msgs).setValue(lastMsg);
-                                                    mDatabase.child("chat").child("publicDump").child("count").setValue(msgs);
-                                                    mDatabase.child("chat").child("message").child("msg").setValue(timeComp + ": " + username + " has joined the channel");
-                                                    listView.post(new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            listView.setSelection(customAdapter.getCount() - 1);
-                                                        }
-                                                    });
-
-                                                    start = false;
+                    final String username = dataSnapshot.getValue(String.class);
+                    if (username != null) {
 
 
-                                                }
-                                            }
+                        mDatabase.child("chat").child("publicDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                            @Override
-                                            public void onCancelled(DatabaseError databaseError) {
+                                final Long countOfChats = dataSnapshot.getValue(Long.class);
 
-                                            }
-                                        });
+                                if (countOfChats != null) {
 
+                                    if (countOfChats >= 30) {
 
-                                    }
+                                        for (int i = (Integer.parseInt(String.valueOf(countOfChats)) - 30); i <= countOfChats; i++) {
 
-                                }
+                                            mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + i).addListenerForSingleValueEvent(new ValueEventListener() {
+                                                @Override
+                                                public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                @Override
-                                public void onCancelled(DatabaseError databaseError) {
+                                                    String message = dataSnapshot.getValue(String.class);
+                                                    if (message != null) {
 
-                                }
-                            });
-                        }
+                                                        if (message.contains("<") && message.contains(">")) {
 
-                        if (count >= 30) {
-
-                            for (int i = Integer.parseInt(String.valueOf(count)) - 30; i <= count; i++) {
-
-                                Log.i("time", String.valueOf(i));
-                                mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + i).addListenerForSingleValueEvent(new ValueEventListener() {
-                                    @Override
-                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                        final String message = dataSnapshot.getValue(String.class);
-                                        if (message != null) {
-
-                                            if (message.contains("<") && message.contains(">")) {
-
-                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        String username = dataSnapshot.getValue(String.class);
-                                                        if (username != null) {
-
+                                                            final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
                                                             if (extract.equals(username)) {
 
-                                                                Log.i("Extract", extract);
+                                                                int semicnt = 0;
+                                                                int num = 0;
+                                                                //Log.i("Loop", "Yes");
+
+                                                                for (int i = 0; i < message.length(); i++) {
+
+                                                                    //Log.i("Loop", "y");
+
+                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                        semicnt++;
+                                                                        //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                        if (semicnt == 3) {
+
+                                                                            num = i;
+                                                                            i = message.length() - 1;
+                                                                            String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                            if (filter) {
+
+                                                                                if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    objects.add(chat);
+
+                                                                                } else {
+
+                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    objects.add(chat);
+
+
+                                                                                }
+
+                                                                            } else {
+
+                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                objects.add(chat);
+
+                                                                            }
+
+
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+                                                            } else {
+
+                                                                int semicnt = 0;
+                                                                int num = 0;
+                                                                //Log.i("Loop", "Yes");
+
+                                                                for (int i = 0; i < message.length(); i++) {
+
+                                                                    //Log.i("Loop", "y");
+
+                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                        semicnt++;
+                                                                        //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                        if (semicnt == 3) {
+
+                                                                            num = i;
+                                                                            i = message.length() - 1;
+                                                                            String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                            if (filter) {
+
+                                                                                if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    objects.add(chat);
+
+
+                                                                                } else {
+
+                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    objects.add(chat);
+
+
+                                                                                }
+
+                                                                            } else {
+
+                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                objects.add(chat);
+
+
+                                                                            }
+
+
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+                                                            }
+
+                                                            customAdapter.notifyDataSetChanged();
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        }
+
+                                                    }
+
+                                                }
+
+                                                @Override
+                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                }
+                                            });
+
+                                            if (i == countOfChats) {
+
+                                                Handler handler = new Handler();
+                                                handler.postDelayed(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        Log.i("adapter", String.valueOf(customAdapter.getCount()));
+                                                        mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                String message = dataSnapshot.getValue(String.class);
+
+                                                                if (message != null) {
+
+                                                                    if (message.contains("<") && message.contains(">")) {
+
+                                                                        final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
+                                                                        if (extract.equals(username)) {
+
+                                                                            int semicnt = 0;
+                                                                            int num = 0;
+                                                                            //Log.i("Loop", "Yes");
+
+                                                                            for (int i = 0; i < message.length(); i++) {
+
+                                                                                //Log.i("Loop", "y");
+
+                                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                    semicnt++;
+                                                                                    //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                    if (semicnt == 3) {
+
+                                                                                        num = i;
+                                                                                        i = message.length() - 1;
+                                                                                        String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                                        if (filter) {
+
+                                                                                            if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                objects.add(chat);
+
+
+                                                                                            } else {
+
+                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                objects.add(chat);
+
+
+                                                                                            }
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            objects.add(chat);
+
+
+                                                                                        }
+
+
+                                                                                    }
+
+                                                                                }
+
+                                                                            }
+
+                                                                        } else {
+
+                                                                            int semicnt = 0;
+                                                                            int num = 0;
+                                                                            //Log.i("Loop", "Yes");
+
+                                                                            for (int i = 0; i < message.length(); i++) {
+
+                                                                                //Log.i("Loop", "y");
+
+                                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                    semicnt++;
+                                                                                    //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                    if (semicnt == 3) {
+
+                                                                                        num = i;
+                                                                                        i = message.length() - 1;
+                                                                                        String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                                        if (filter) {
+
+                                                                                            if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                objects.add(chat);
+
+                                                                                            } else {
+
+                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                objects.add(chat);
+
+
+                                                                                            }
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            objects.add(chat);
+
+
+                                                                                        }
+
+
+                                                                                    }
+
+                                                                                }
+
+                                                                            }
+
+                                                                        }
+
+                                                                        customAdapter.notifyDataSetChanged();
+                                                                        listView.post(new Runnable() {
+                                                                            @Override
+                                                                            public void run() {
+
+                                                                                listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                            }
+                                                                        });
+
+                                                                    } else {
+
+                                                                        int semicnt = 0;
+                                                                        int num = 0;
+                                                                        //Log.i("Loop", "Yes");
+
+                                                                        for (int i = 0; i < message.length(); i++) {
+
+                                                                            //Log.i("Loop", "y");
+
+                                                                            if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                semicnt++;
+                                                                                //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                if (semicnt == 3) {
+
+                                                                                    num = i;
+                                                                                    i = message.length() - 1;
+                                                                                    String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                    String finalM = message.replace(time + ": ", "");
+
+                                                                                    if (filter) {
+
+                                                                                        if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            objects.add(chat);
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            objects.add(chat);
+
+                                                                                        }
+
+                                                                                    } else {
+
+                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        objects.add(chat);
+
+
+                                                                                    }
+
+
+                                                                                }
+
+                                                                            }
+
+                                                                        }
+
+                                                                    }
+
+                                                                    customAdapter.notifyDataSetChanged();
+                                                                    listView.post(new Runnable() {
+                                                                        @Override
+                                                                        public void run() {
+
+                                                                            listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                        }
+                                                                    });
+
+
+                                                                }
+
+                                                            }
+
+                                                            @Override
+                                                            public void onCancelled(DatabaseError databaseError) {
+
+                                                            }
+                                                        });
+
+                                                        Handler handle2 = new Handler();
+                                                        handle2.postDelayed(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                final String timeComp = time_format.format(Calendar.getInstance().getTime());
+
+                                                                mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                    @Override
+                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                        String lastMsg = dataSnapshot.getValue(String.class);
+                                                                        if (lastMsg != null) {
+
+                                                                            int msgs = Integer.parseInt(String.valueOf(countOfChats)) + 1;
+
+                                                                            mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + msgs).setValue(lastMsg);
+                                                                            mDatabase.child("chat").child("publicDump").child("count").setValue(msgs);
+                                                                            mDatabase.child("chat").child("message").child("msg").setValue(timeComp + ": " + username + " has joined the channel");
+                                                                            listView.post(new Runnable() {
+                                                                                @Override
+                                                                                public void run() {
+                                                                                    listView.setSelection(customAdapter.getCount() - 1);
+                                                                                }
+                                                                            });
+
+
+                                                                        }
+                                                                    }
+
+                                                                    @Override
+                                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                                    }
+                                                                });
+                                                            }
+                                                        }, 500);
+
+                                                    }
+                                                }, 500);
+
+
+                                            }
+
+                                        }
+
+                                    } else if (countOfChats > 0 && countOfChats < 30) {
+
+                                        for (int i = 1; i <= Integer.parseInt(String.valueOf(countOfChats)); i++) {
+
+                                            mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + i).addListenerForSingleValueEvent(new ValueEventListener() {
+                                                @Override
+                                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                    String message = dataSnapshot.getValue(String.class);
+                                                    if (message != null) {
+
+                                                        if (message.contains("<") && message.contains(">")) {
+
+                                                            final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
+                                                            if (extract.equals(username)) {
 
                                                                 int semicnt = 0;
                                                                 int num = 0;
@@ -1482,10 +1822,6 @@ public class ChatsActivity extends AbstractActivity {
                                                                             }
 
 
-
-
-
-
                                                                         }
 
                                                                     }
@@ -1496,7 +1832,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                 int semicnt = 0;
                                                                 int num = 0;
-                                                                // Log.i("Loop", "Yes");
+                                                                //Log.i("Loop", "Yes");
 
                                                                 for (int i = 0; i < message.length(); i++) {
 
@@ -1511,8 +1847,9 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             num = i;
                                                                             i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
+                                                                            String time = message.substring(0, (Math.min(message.length() - 1, num)));
                                                                             String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
                                                                             if (filter) {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
@@ -1533,6 +1870,231 @@ public class ChatsActivity extends AbstractActivity {
                                                                                 objects.add(chat);
 
                                                                             }
+
+
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+                                                            }
+
+                                                            customAdapter.notifyDataSetChanged();
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        }
+
+                                                    }
+
+                                                }
+
+                                                @Override
+                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                }
+                                            });
+
+                                            if (i == countOfChats) {
+
+                                                customAdapter.notifyDataSetChanged();
+
+                                                Handler handler = new Handler();
+                                                handler.postDelayed(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+
+                                                        mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                String message = dataSnapshot.getValue(String.class);
+
+                                                                if (message != null) {
+
+                                                                    if (message.contains("<") && message.contains(">")) {
+
+                                                                        final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
+                                                                        if (extract.equals(username)) {
+
+                                                                            int semicnt = 0;
+                                                                            int num = 0;
+                                                                            //Log.i("Loop", "Yes");
+
+                                                                            for (int i = 0; i < message.length(); i++) {
+
+                                                                                //Log.i("Loop", "y");
+
+                                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                    semicnt++;
+                                                                                    //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                    if (semicnt == 3) {
+
+                                                                                        num = i;
+                                                                                        i = message.length() - 1;
+                                                                                        String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                                        if (filter) {
+
+                                                                                            if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                objects.add(chat);
+
+                                                                                            } else {
+
+                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                objects.add( chat);
+
+                                                                                            }
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            objects.add( chat);
+
+
+                                                                                        }
+
+
+                                                                                    }
+
+                                                                                }
+
+                                                                            }
+
+                                                                        } else {
+
+                                                                            int semicnt = 0;
+                                                                            int num = 0;
+                                                                            //Log.i("Loop", "Yes");
+
+                                                                            for (int i = 0; i < message.length(); i++) {
+
+                                                                                //Log.i("Loop", "y");
+
+                                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                    semicnt++;
+                                                                                    //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                    if (semicnt == 3) {
+
+                                                                                        num = i;
+                                                                                        i = message.length() - 1;
+                                                                                        String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
+
+                                                                                        if (filter) {
+
+                                                                                            if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                objects.add(chat);
+
+                                                                                            } else {
+
+                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                objects.add(chat);
+
+
+                                                                                            }
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            objects.add( chat);
+
+                                                                                        }
+
+
+                                                                                    }
+
+                                                                                }
+
+                                                                            }
+
+                                                                        }
+
+                                                                        customAdapter.notifyDataSetChanged();
+                                                                        listView.post(new Runnable() {
+                                                                            @Override
+                                                                            public void run() {
+
+                                                                                listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                            }
+                                                                        });
+
+                                                                    } else {
+
+                                                                        int semicnt = 0;
+                                                                        int num = 0;
+                                                                        //Log.i("Loop", "Yes");
+
+                                                                        for (int i = 0; i < message.length(); i++) {
+
+                                                                            //Log.i("Loop", "y");
+
+                                                                            if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                                semicnt++;
+                                                                                //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                                if (semicnt == 3) {
+
+                                                                                    num = i;
+                                                                                    i = message.length() - 1;
+                                                                                    String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                                    String finalM = message.replace(time + ": ", "");
+
+                                                                                    if (filter) {
+
+                                                                                        if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            objects.add(chat);
+
+
+                                                                                        } else {
+
+                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            objects.add( chat);
+
+
+                                                                                        }
+
+                                                                                    } else {
+
+                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        objects.add( chat);
+
+                                                                                    }
+
+
+                                                                                    customAdapter.notifyDataSetChanged();
+                                                                                    listView.post(new Runnable() {
+                                                                                        @Override
+                                                                                        public void run() {
+                                                                                            listView.setSelection(customAdapter.getCount() - 1);
+                                                                                        }
+                                                                                    });
+
+
+                                                                                }
+
+                                                                            }
+
                                                                         }
 
                                                                     }
@@ -1542,167 +2104,130 @@ public class ChatsActivity extends AbstractActivity {
 
                                                             }
 
-                                                            customAdapter.notifyDataSetChanged();
+                                                            @Override
+                                                            public void onCancelled(DatabaseError databaseError) {
 
-                                                        }
+                                                            }
+                                                        });
+
+                                                        Handler handle2 = new Handler();
+                                                        handle2.postDelayed(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                final String timeComp = time_format.format(Calendar.getInstance().getTime());
+
+                                                                mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                    @Override
+                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                        String lastMsg = dataSnapshot.getValue(String.class);
+                                                                        if (lastMsg != null) {
+
+                                                                            int msgs = Integer.parseInt(String.valueOf(countOfChats)) + 1;
+
+                                                                            mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + msgs).setValue(lastMsg);
+                                                                            mDatabase.child("chat").child("publicDump").child("count").setValue(msgs);
+                                                                            mDatabase.child("chat").child("message").child("msg").setValue(timeComp + ": " + username + " has joined the channel");
+                                                                            listView.post(new Runnable() {
+                                                                                @Override
+                                                                                public void run() {
+                                                                                    listView.setSelection(customAdapter.getCount() - 1);
+                                                                                }
+                                                                            });
+
+
+                                                                        }
+                                                                    }
+
+                                                                    @Override
+                                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                                    }
+                                                                });
+                                                            }
+                                                        }, 500);
 
                                                     }
+                                                }, 500);
 
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
 
-                                                    }
-                                                });
                                             }
-
-
-
 
                                         }
 
                                     }
 
-                                    @Override
-                                    public void onCancelled(DatabaseError databaseError) {
+                                } else {
 
-                                    }
-                                });
+                                    Handler handler = new Handler();
+                                    handler.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
+                                                @Override
+                                                public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                if (firstClick) {
+                                                    String message = dataSnapshot.getValue(String.class);
 
-                                    Log.i("FClick", "Y");
+                                                    if (message != null) {
 
-                                    if (i == count) {
+                                                        if (message.contains("<") && message.contains(">")) {
 
-                                        Log.i("fclk2", "y");
-                                        Handler handler = new Handler();
+                                                            final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
+                                                            if (extract.equals(username)) {
 
-                                        handler.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
+                                                                int semicnt = 0;
+                                                                int num = 0;
+                                                                //Log.i("Loop", "Yes");
 
-                                                if (onLoad) {
+                                                                for (int i = 0; i < message.length(); i++) {
 
-                                                    mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                        @Override
-                                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                    //Log.i("Loop", "y");
 
-                                                            final String message = dataSnapshot.getValue(String.class);
-                                                            if (message != null) {
+                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
 
-                                                                if (message.contains("<") && message.contains(">")) {
+                                                                        semicnt++;
+                                                                        //Log.i("cnt", String.valueOf(semicnt));
 
-                                                                    final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
+                                                                        if (semicnt == 3) {
 
+                                                                            num = i;
+                                                                            i = message.length() - 1;
+                                                                            String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
 
-                                                                    mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                        @Override
-                                                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                            if (filter) {
 
-                                                                            String username = dataSnapshot.getValue(String.class);
-                                                                            if (username != null) {
+                                                                                if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                Log.i("Listener", "listenerA");
-                                                                                if (extract.equals(username)) {
-
-                                                                                    Log.i("Extract", extract);
-
-                                                                                    int semicnt = 0;
-                                                                                    int num = 0;
-                                                                                    //Log.i("Loop", "Yes");
-
-                                                                                    for (int i = 0; i < message.length(); i++) {
-
-                                                                                        //Log.i("Loop", "y");
-
-                                                                                        if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                            semicnt++;
-                                                                                            //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                            if (semicnt == 3) {
-
-                                                                                                num = i;
-                                                                                                i = message.length() - 1;
-                                                                                                String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                                String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                                if (filter) {
-
-                                                                                                    if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                        chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                        objects.add(chat);
-
-                                                                                                    } else {
-
-                                                                                                        chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                        objects.add(chat);
-
-                                                                                                    }
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            }
-
+                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    objects.add(chat);
+                                                                                    customAdapter.notifyDataSetChanged();
+                                                                                    listView.post(new Runnable() {
+                                                                                        @Override
+                                                                                        public void run() {
+                                                                                            listView.setSelection(customAdapter.getCount() - 1);
                                                                                         }
-
-                                                                                    }
+                                                                                    });
 
                                                                                 } else {
 
-                                                                                    int semicnt = 0;
-                                                                                    int num = 0;
-                                                                                    // Log.i("Loop", "Yes");
-
-                                                                                    for (int i = 0; i < message.length(); i++) {
-
-                                                                                        //Log.i("Loop", "y");
-
-                                                                                        if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                            semicnt++;
-                                                                                            //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                            if (semicnt == 3) {
-
-                                                                                                num = i;
-                                                                                                i = message.length() - 1;
-                                                                                                String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                                String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                                if (filter) {
-
-                                                                                                    if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                        chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                        objects.add(chat);
-
-                                                                                                    } else {
-
-                                                                                                        chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                        objects.add(chat);
-
-                                                                                                    }
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-                                                                                            }
-
+                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    objects.add(chat);
+                                                                                    customAdapter.notifyDataSetChanged();
+                                                                                    listView.post(new Runnable() {
+                                                                                        @Override
+                                                                                        public void run() {
+                                                                                            listView.setSelection(customAdapter.getCount() - 1);
                                                                                         }
-
-
-                                                                                    }
+                                                                                    });
 
                                                                                 }
 
+                                                                            } else {
+
+                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
                                                                                     @Override
@@ -1713,56 +2238,147 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             }
 
-                                                                        }
-
-                                                                        @Override
-                                                                        public void onCancelled(DatabaseError databaseError) {
 
                                                                         }
-                                                                    });
-                                                                } else {
 
+                                                                    }
 
-                                                                    int semicnt = 0;
-                                                                    int num = 0;
-                                                                    // Log.i("Loop", "Yes");
+                                                                }
 
-                                                                    for (int i = 0; i < message.length(); i++) {
+                                                            } else {
 
-                                                                        //Log.i("Loop", "y");
+                                                                int semicnt = 0;
+                                                                int num = 0;
+                                                                //Log.i("Loop", "Yes");
 
-                                                                        if (String.valueOf(message.charAt(i)).equals(":")) {
+                                                                for (int i = 0; i < message.length(); i++) {
 
-                                                                            semicnt++;
-                                                                            //Log.i("cnt", String.valueOf(semicnt));
+                                                                    //Log.i("Loop", "y");
 
-                                                                            if (semicnt == 3) {
+                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
 
-                                                                                num = i;
-                                                                                i = message.length() - 1;
-                                                                                String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                String finalM = message.replace(time + ": ", "");
-                                                                                if (filter) {
+                                                                        semicnt++;
+                                                                        //Log.i("cnt", String.valueOf(semicnt));
 
-                                                                                    if (filterCheck(finalM.toLowerCase())) {
+                                                                        if (semicnt == 3) {
 
-                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                        objects.add(chat);
+                                                                            num = i;
+                                                                            i = message.length() - 1;
+                                                                            String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
 
-                                                                                    } else {
+                                                                            if (filter) {
 
-                                                                                        chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                                        objects.add(chat);
+                                                                                if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    }
+                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    objects.add(chat);
+                                                                                    customAdapter.notifyDataSetChanged();
+                                                                                    listView.post(new Runnable() {
+                                                                                        @Override
+                                                                                        public void run() {
+                                                                                            listView.setSelection(customAdapter.getCount() - 1);
+                                                                                        }
+                                                                                    });
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
+                                                                                    customAdapter.notifyDataSetChanged();
+                                                                                    listView.post(new Runnable() {
+                                                                                        @Override
+                                                                                        public void run() {
+                                                                                            listView.setSelection(customAdapter.getCount() - 1);
+                                                                                        }
+                                                                                    });
 
                                                                                 }
+
+                                                                            } else {
+
+                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                objects.add(chat);
+                                                                                customAdapter.notifyDataSetChanged();
+                                                                                listView.post(new Runnable() {
+                                                                                    @Override
+                                                                                    public void run() {
+                                                                                        listView.setSelection(customAdapter.getCount() - 1);
+                                                                                    }
+                                                                                });
+
                                                                             }
+
+
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+                                                            }
+
+                                                        } else {
+
+                                                            int semicnt = 0;
+                                                            int num = 0;
+                                                            //Log.i("Loop", "Yes");
+
+                                                            for (int i = 0; i < message.length(); i++) {
+
+                                                                //Log.i("Loop", "y");
+
+                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
+
+                                                                    semicnt++;
+                                                                    //Log.i("cnt", String.valueOf(semicnt));
+
+                                                                    if (semicnt == 3) {
+
+                                                                        num = i;
+                                                                        i = message.length() - 1;
+                                                                        String time = message.substring(0, (Math.min(message.length() - 1, num)));
+                                                                        String finalM = message.replace(time + ": ", "");
+
+                                                                        if (filter) {
+
+                                                                            if (filterCheck(finalM.toLowerCase())) {
+
+                                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                objects.add(chat);
+                                                                                customAdapter.notifyDataSetChanged();
+                                                                                listView.post(new Runnable() {
+                                                                                    @Override
+                                                                                    public void run() {
+                                                                                        listView.setSelection(customAdapter.getCount() - 1);
+                                                                                    }
+                                                                                });
+
+                                                                            } else {
+
+                                                                                chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                objects.add(chat);
+                                                                                customAdapter.notifyDataSetChanged();
+                                                                                listView.post(new Runnable() {
+                                                                                    @Override
+                                                                                    public void run() {
+                                                                                        listView.setSelection(customAdapter.getCount() - 1);
+                                                                                    }
+                                                                                });
+
+                                                                            }
+
+                                                                        } else {
+
+                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                            objects.add(chat);
+                                                                            customAdapter.notifyDataSetChanged();
+                                                                            listView.post(new Runnable() {
+                                                                                @Override
+                                                                                public void run() {
+                                                                                    listView.setSelection(customAdapter.getCount() - 1);
+                                                                                }
+                                                                            });
 
                                                                         }
 
@@ -1773,6 +2389,45 @@ public class ChatsActivity extends AbstractActivity {
 
                                                             }
 
+                                                        }
+
+
+                                                    }
+
+                                                }
+
+                                                @Override
+                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                }
+                                            });
+                                            Handler handle2 = new Handler();
+                                            handle2.postDelayed(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                    final String timeComp = time_format.format(Calendar.getInstance().getTime());
+
+                                                    mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                        @Override
+                                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                                            String lastMsg = dataSnapshot.getValue(String.class);
+                                                            if (lastMsg != null) {
+
+                                                                int msgs = 1;
+
+                                                                mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + msgs).setValue(lastMsg);
+                                                                mDatabase.child("chat").child("publicDump").child("count").setValue(msgs);
+                                                                mDatabase.child("chat").child("message").child("msg").setValue(timeComp + ": " + username + " has joined the channel");
+                                                                listView.post(new Runnable() {
+                                                                    @Override
+                                                                    public void run() {
+                                                                        listView.setSelection(customAdapter.getCount() - 1);
+                                                                    }
+                                                                });
+
+
+                                                            }
                                                         }
 
                                                         @Override
@@ -1780,1666 +2435,21 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         }
                                                     });
-
                                                 }
+                                            }, 500);
+                                        }
+                                    }, 500);
 
-                                                mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                        final String message = dataSnapshot.getValue(String.class);
-                                                        if (message != null) {
-
-                                                            if (message.contains("<") && message.contains(">")) {
-
-                                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-
-                                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                    @Override
-                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                        String username = dataSnapshot.getValue(String.class);
-                                                                        if (username != null) {
-
-                                                                            Log.i("Listener", "listenerA");
-                                                                            if (extract.equals(username)) {
-
-                                                                                Log.i("Extract", extract);
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                //Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-
-
-                                                                                        }
-
-                                                                                    }
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                // Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-                                                                                        }
-
-                                                                                    }
-
-
-                                                                                }
-
-                                                                            }
-
-                                                                            customAdapter.notifyDataSetChanged();
-                                                                            listView.post(new Runnable() {
-                                                                                @Override
-                                                                                public void run() {
-                                                                                    listView.setSelection(customAdapter.getCount() - 1);
-                                                                                }
-                                                                            });
-
-                                                                        }
-
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                                    }
-                                                                });
-                                                            } else {
-
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-
-                                                            }
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-
-                                            }
-                                        }, 700);
-
-
-                                    }
-                                } else {
-                                    if (i == count) {
-
-
-                                        Handler newH = new Handler();
-
-                                        newH.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
-
-                                                mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        final String message = dataSnapshot.getValue(String.class);
-                                                        if (message != null) {
-                                                            if (message.contains("<") && message.contains(">")) {
-
-                                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                    @Override
-                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                        String username = dataSnapshot.getValue(String.class);
-                                                                        if (username != null) {
-                                                                            if (extract.equals(username)) {
-
-                                                                                Log.i("Extract", extract);
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                //Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-
-
-                                                                                        }
-
-                                                                                    }
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                // Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-                                                                                        }
-
-                                                                                    }
-
-
-                                                                                }
-
-                                                                            }
-                                                                            customAdapter.notifyDataSetChanged();
-
-
-                                                                        }
-
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                                    }
-                                                                });
-                                                            } else {
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "nAt: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM,  "At: " + time, "server");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-                                                            }
-
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-
-                                            }
-                                        }, 700);
-
-
-                                    }
                                 }
-
-
 
                             }
 
-                        } else if (count > 0 && count < 30) {
-
-                            for (int i = 1; i <= Integer.parseInt(String.valueOf(count)); i++) {
-
-                                mDatabase.child("chat").child("publicDump").child("dumpedMessages").child("message" + i).addListenerForSingleValueEvent(new ValueEventListener() {
-                                    @Override
-                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                        final String message = dataSnapshot.getValue(String.class);
-                                        if (message != null) {
-
-                                            if (message.contains("<") && message.contains(">")) {
-
-                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-                                                Log.i("User", "yes");
-
-                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        String username = dataSnapshot.getValue(String.class);
-                                                        if (username != null) {
-                                                            if (extract.equals(username)) {
-
-                                                                Log.i("Extract", extract);
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                //Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-
-                                                                        }
-
-                                                                    }
-
-                                                                }
-
-                                                            } else {
-
-                                                                Log.i("Other", extract);
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-
-                                                            }
-
-                                                            customAdapter.notifyDataSetChanged();
-
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-                                            }
-
-
-                                        }
-
-                                    }
-
-                                    @Override
-                                    public void onCancelled(DatabaseError databaseError) {
-
-                                    }
-                                });
-
-                                if (firstClick) {
-
-                                    if (i == count) {
-
-
-                                        Handler handle2 = new Handler();
-
-                                        handle2.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
-
-                                                mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        final String message = dataSnapshot.getValue(String.class);
-                                                        if (message != null) {
-
-                                                            if (message.contains("<") && message.contains(">")) {
-
-                                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                    @Override
-                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                        String username = dataSnapshot.getValue(String.class);
-                                                                        if (username != null) {
-
-                                                                            if (extract.equals(username)) {
-
-                                                                                Log.i("Extract", extract);
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                //Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-
-
-                                                                                        }
-
-                                                                                    }
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                Log.i("Other", extract);
-
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                // Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-                                                                                        }
-
-                                                                                    }
-
-
-                                                                                }
-
-                                                                            }
-                                                                            customAdapter.notifyDataSetChanged();
-
-                                                                            listView.post(new Runnable() {
-                                                                                @Override
-                                                                                public void run() {
-                                                                                    listView.setSelection(customAdapter.getCount() - 1);
-                                                                                }
-                                                                            });
-
-                                                                        }
-
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                                    }
-                                                                });
-                                                            } else {
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-
-                                                                customAdapter.notifyDataSetChanged();
-
-                                                            }
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-
-                                            }
-                                        }, 700);
-
-
-                                    }
-                                } else {
-
-                                    if (i == count) {
-
-
-                                        Handler newH = new Handler();
-
-                                        newH.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
-
-                                                mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        final String message = dataSnapshot.getValue(String.class);
-                                                        if (message != null) {
-
-                                                            if (message.contains("<") && message.contains(">")) {
-
-                                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                    @Override
-                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                        String username = dataSnapshot.getValue(String.class);
-                                                                        if (username != null) {
-
-                                                                            if (extract.equals(username)) {
-
-                                                                                Log.i("Extract", extract);
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                //Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-
-
-                                                                                        }
-
-                                                                                    }
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                Log.i("Other", extract);
-
-                                                                                int semicnt = 0;
-                                                                                int num = 0;
-                                                                                // Log.i("Loop", "Yes");
-
-                                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                                    //Log.i("Loop", "y");
-
-                                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                                        semicnt++;
-                                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                                        if (semicnt == 3) {
-
-                                                                                            num = i;
-                                                                                            i = message.length() - 1;
-                                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                                            if (filter) {
-
-                                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                } else {
-
-                                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                    objects.add(chat);
-
-                                                                                                }
-
-                                                                                            } else {
-
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                                objects.add(chat);
-
-                                                                                            }
-                                                                                        }
-
-                                                                                    }
-
-
-                                                                                }
-
-                                                                            }
-                                                                            customAdapter.notifyDataSetChanged();
-
-
-                                                                        }
-
-                                                                    }
-
-                                                                    @Override
-                                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                                    }
-                                                                });
-                                                            }
-
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-
-                                            }
-                                        }, 700);
-
-
-                                    }
-
-                                }
-
-
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
 
                             }
-
-                        } else {
-
-                            if (firstClick) {
-
-                                mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
-                                    @Override
-                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                        final String message = dataSnapshot.getValue(String.class);
-                                        if (message != null) {
-                                            if (message.contains("<") && message.contains(">")) {
-
-                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        String username = dataSnapshot.getValue(String.class);
-                                                        if (username != null) {
-
-                                                            if (extract.equals(username)) {
-
-                                                                Log.i("Extract", extract);
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                //Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-                                                                        }
-
-                                                                    }
-
-                                                                }
-
-                                                            } else {
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-
-                                                            }
-                                                            customAdapter.notifyDataSetChanged();
-
-
-                                                            listView.post(new Runnable() {
-                                                                @Override
-                                                                public void run() {
-                                                                    listView.setSelection(customAdapter.getCount() - 1);
-                                                                }
-                                                            });
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-                                            } else {
-
-                                                int semicnt = 0;
-                                                int num = 0;
-                                                // Log.i("Loop", "Yes");
-
-                                                for (int i = 0; i < message.length(); i++) {
-
-                                                    //Log.i("Loop", "y");
-
-                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                        semicnt++;
-                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                        if (semicnt == 3) {
-
-                                                            num = i;
-                                                            i = message.length() - 1;
-                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                            String finalM = message.replace(time + ": ", "");
-                                                            if (filter) {
-
-                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                    chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                    objects.add(chat);
-
-                                                                } else {
-
-                                                                    chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                    objects.add(chat);
-
-                                                                }
-
-                                                            } else {
-
-                                                                chatBubble chat = new chatBubble(finalM,"At: " + time, "server");
-                                                                objects.add(chat);
-
-                                                            }
-                                                        }
-
-                                                    }
-
-
-                                                }
-
-                                                customAdapter.notifyDataSetChanged();
-
-                                            }
-
-                                        }
-
-                                    }
-
-                                    @Override
-                                    public void onCancelled(DatabaseError databaseError) {
-
-                                    }
-                                });
-
-                            } else {
-
-                                mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                    @Override
-                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                        final String message = dataSnapshot.getValue(String.class);
-                                        if (message != null) {
-
-                                            if (message.contains("<") && message.contains(">")) {
-
-                                                final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                                mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                        String username = dataSnapshot.getValue(String.class);
-                                                        if (username != null) {
-
-                                                            if (extract.equals(username)) {
-
-                                                                Log.i("Extract", extract);
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                //Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-
-                                                                        }
-
-                                                                    }
-
-                                                                }
-
-                                                            } else {
-
-                                                                int semicnt = 0;
-                                                                int num = 0;
-                                                                // Log.i("Loop", "Yes");
-
-                                                                for (int i = 0; i < message.length(); i++) {
-
-                                                                    //Log.i("Loop", "y");
-
-                                                                    if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                        semicnt++;
-                                                                        //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                        if (semicnt == 3) {
-
-                                                                            num = i;
-                                                                            i = message.length() - 1;
-                                                                            String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                            String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                            if (filter) {
-
-                                                                                if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                } else {
-
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                    objects.add(chat);
-
-                                                                                }
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-                                                                        }
-
-                                                                    }
-
-
-                                                                }
-
-                                                            }
-
-                                                            customAdapter.notifyDataSetChanged();
-                                                            listView.post(new Runnable() {
-                                                                @Override
-                                                                public void run() {
-                                                                    listView.setSelection(customAdapter.getCount() - 1);
-                                                                }
-                                                            });
-
-
-                                                        }
-
-                                                    }
-
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-                                            }
-
-                                        }
-
-                                    }
-
-                                    @Override
-                                    public void onCancelled(DatabaseError databaseError) {
-
-                                    }
-                                });
-
-                            }
-
-                        }
-
-                    } else {
-
-                        if (firstClick) {
-
-                            mListener = mDatabase.child("chat").child("message").child("msg").addValueEventListener(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                    final String message = dataSnapshot.getValue(String.class);
-                                    if (message != null) {
-
-                                        if (message.contains("<") && message.contains(">")) {
-
-                                            final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                            mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    String username = dataSnapshot.getValue(String.class);
-                                                    if (username != null) {
-
-                                                        if (extract.equals(username)) {
-
-                                                            Log.i("Extract", extract);
-
-                                                            int semicnt = 0;
-                                                            int num = 0;
-                                                            //Log.i("Loop", "Yes");
-
-                                                            for (int i = 0; i < message.length(); i++) {
-
-                                                                //Log.i("Loop", "y");
-
-                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                    semicnt++;
-                                                                    //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                    if (semicnt == 3) {
-
-                                                                        num = i;
-                                                                        i = message.length() - 1;
-                                                                        String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                        if (filter) {
-
-                                                                            if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-                                                                        } else {
-
-                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                            objects.add(chat);
-
-                                                                        }
-
-
-                                                                    }
-
-                                                                }
-
-                                                            }
-
-                                                        } else {
-
-                                                            int semicnt = 0;
-                                                            int num = 0;
-                                                            // Log.i("Loop", "Yes");
-
-                                                            for (int i = 0; i < message.length(); i++) {
-
-                                                                //Log.i("Loop", "y");
-
-                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                    semicnt++;
-                                                                    //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                    if (semicnt == 3) {
-
-                                                                        num = i;
-                                                                        i = message.length() - 1;
-                                                                        String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                        if (filter) {
-
-                                                                            if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-                                                                        } else {
-
-                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                            objects.add(chat);
-
-                                                                        }
-                                                                    }
-
-                                                                }
-
-
-                                                            }
-
-                                                        }
-
-                                                        customAdapter.notifyDataSetChanged();
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-                                                            }
-                                                        });
-
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-                                        } else {
-
-                                            int semicnt = 0;
-                                            int num = 0;
-                                            // Log.i("Loop", "Yes");
-
-                                            for (int i = 0; i < message.length(); i++) {
-
-                                                //Log.i("Loop", "y");
-
-                                                if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                    semicnt++;
-                                                    //Log.i("cnt", String.valueOf(semicnt));
-
-                                                    if (semicnt == 3) {
-
-                                                        num = i;
-                                                        i = message.length() - 1;
-                                                        String time = message.substring(0, (Math.min(message.length(), num)));
-                                                        String finalM = message.replace(time + ": ", "");
-                                                        if (filter) {
-
-                                                            if (filterCheck(finalM.toLowerCase())) {
-
-                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                                objects.add(chat);
-
-                                                            } else {
-
-                                                                chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
-                                                                objects.add(chat);
-
-                                                            }
-
-                                                        } else {
-
-                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
-                                                            objects.add(chat);
-
-                                                        }
-                                                    }
-
-                                                }
-
-
-                                            }
-
-                                            customAdapter.notifyDataSetChanged();
-
-                                        }
-
-
-                                    }
-
-                                }
-
-                                @Override
-                                public void onCancelled(DatabaseError databaseError) {
-
-                                }
-                            });
-
-                        } else {
-
-                            mDatabase.child("chat").child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                    final String message = dataSnapshot.getValue(String.class);
-                                    if (message != null) {
-
-                                        if (message.contains("<") && message.contains(">")) {
-
-                                            final String extract = message.substring(message.lastIndexOf("<") + 1, message.indexOf(">"));
-
-                                            mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    String username = dataSnapshot.getValue(String.class);
-                                                    if (username != null) {
-
-                                                        if (extract.equals(username)) {
-
-                                                            Log.i("Extract", extract);
-
-                                                            int semicnt = 0;
-                                                            int num = 0;
-                                                            //Log.i("Loop", "Yes");
-
-                                                            for (int i = 0; i < message.length(); i++) {
-
-                                                                //Log.i("Loop", "y");
-
-                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                    semicnt++;
-                                                                    //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                    if (semicnt == 3) {
-
-                                                                        num = i;
-                                                                        i = message.length() - 1;
-                                                                        String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                        if (filter) {
-
-                                                                            if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-                                                                        } else {
-
-                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
-                                                                            objects.add(chat);
-
-                                                                        }
-
-
-                                                                    }
-
-                                                                }
-
-                                                            }
-
-                                                        } else {
-
-                                                            int semicnt = 0;
-                                                            int num = 0;
-                                                            // Log.i("Loop", "Yes");
-
-                                                            for (int i = 0; i < message.length(); i++) {
-
-                                                                //Log.i("Loop", "y");
-
-                                                                if (String.valueOf(message.charAt(i)).equals(":")) {
-
-                                                                    semicnt++;
-                                                                    //Log.i("cnt", String.valueOf(semicnt));
-
-                                                                    if (semicnt == 3) {
-
-                                                                        num = i;
-                                                                        i = message.length() - 1;
-                                                                        String time = message.substring(0, (Math.min(message.length(), num)));
-                                                                        String finalM = message.replace(time + ": ", "").replace("<" + extract + "> ", "");
-                                                                        if (filter) {
-
-                                                                            if (filterCheck(finalM.toLowerCase())) {
-
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            } else {
-
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                                objects.add(chat);
-
-                                                                            }
-
-                                                                        } else {
-
-                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
-                                                                            objects.add(chat);
-
-                                                                        }
-                                                                    }
-
-                                                                }
-
-
-                                                            }
-
-                                                        }
-                                                        customAdapter.notifyDataSetChanged();
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-                                                            }
-                                                        });
-
-
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-                                        }
-
-                                    }
-
-                                }
-
-                                @Override
-                                public void onCancelled(DatabaseError databaseError) {
-
-                                }
-                            });
-
-                        }
+                        });
 
                     }
 
@@ -3451,9 +2461,8 @@ public class ChatsActivity extends AbstractActivity {
                 }
             });
 
-
-
         }
+        
     }
 
 }
