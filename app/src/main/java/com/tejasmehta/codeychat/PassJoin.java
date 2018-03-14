@@ -1,10 +1,13 @@
 package com.tejasmehta.codeychat;
 
+import android.content.Intent;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -26,7 +29,7 @@ public class PassJoin extends AppCompatActivity {
     Button joinG;
     FirebaseAuth mAuth;
     DatabaseReference mDatabase;
-    Boolean groupExist;
+    Boolean groupExist = false;
     String grpVal;
     String groupPass;
 
@@ -70,7 +73,7 @@ public class PassJoin extends AppCompatActivity {
                                         @Override
                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                            Long count = dataSnapshot.getValue(Long.class);
+                                            final Long count = dataSnapshot.getValue(Long.class);
                                             if (count != null) {
 
                                                 for (int i = 1; i <= count; i++) {
@@ -100,50 +103,72 @@ public class PassJoin extends AppCompatActivity {
                                                         }
                                                     });
 
-                                                    if (i == count && groupExist) {
 
-                                                        mDatabase.child("chat").child("groups").child(grpVal).child("password").addListenerForSingleValueEvent(new ValueEventListener() {
+
+                                                        Handler handler = new Handler();
+                                                        handler.postDelayed(new Runnable() {
                                                             @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                            public void run() {
 
-                                                                String password = dataSnapshot.getValue(String.class);
-                                                                if (password != null) {
+                                                                if (num == count && groupExist) {
 
-                                                                    if (password.equals(groupPass)) {
+                                                                mDatabase.child("chat").child("groups").child(grpVal).child("password").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                    @Override
+                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                                        mDatabase.child("chat").child("groups").child(grpVal).child("pplCnt").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                            @Override
-                                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                        String password = dataSnapshot.getValue(String.class);
+                                                                        if (password != null) {
 
-                                                                                Long pplCount = dataSnapshot.getValue(Long.class);
-                                                                                if (pplCount != null) {
+                                                                            if (password.equals(groupPass)) {
 
-                                                                                    mDatabase.child("chat").child("groups").child(grpVal).child("people").child("person" + pplCount).setValue(username);
-                                                                                    mDatabase.child("chat").child("groups").child(grpVal).child("people").child("pplCnt").setValue(pplCount + 1);
+                                                                                mDatabase.child("chat").child("groups").child(grpVal).child("pplCnt").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                                    @Override
+                                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                                        Long pplCount = dataSnapshot.getValue(Long.class);
+                                                                                        if (pplCount != null) {
+
+                                                                                            mDatabase.child("chat").child("groups").child(grpVal).child("people").child("person" + pplCount).setValue(username);
+                                                                                            mDatabase.child("chat").child("groups").child(grpVal).child("people").child("pplCnt").setValue(pplCount + 1);
+                                                                                            Intent chat = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                                            chat.putExtra("tab", 2);
+                                                                                            startActivity(chat);
 
 
-                                                                                }
+                                                                                        }
+
+                                                                                    }
+
+                                                                                    @Override
+                                                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                                                    }
+                                                                                });
 
                                                                             }
 
-                                                                            @Override
-                                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                                            }
-                                                                        });
-
+                                                                        }
                                                                     }
 
+                                                                    @Override
+                                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                                    }
+                                                                });
+
+                                                                } else {
+
+                                                                    Toast.makeText(PassJoin.this, "Group Does not Exist or the Name Entered is Wrong", Toast.LENGTH_SHORT).show();
+
                                                                 }
-                                                            }
-
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
 
                                                             }
-                                                        });
 
-                                                    }
+                                                        }, 500);
+
+
+
+
 
                                                 }
 
@@ -168,6 +193,10 @@ public class PassJoin extends AppCompatActivity {
                         });
 
                     }
+
+                } else {
+
+                    Toast.makeText(PassJoin.this, "Enter a Group Name and Password Please", Toast.LENGTH_SHORT).show();
 
                 }
 

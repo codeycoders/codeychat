@@ -15,6 +15,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -31,6 +33,7 @@ public class LaunchActivity extends AbstractActivity {
 
     FirebaseAuth mAuth;
     DatabaseReference mDatabase;
+    private AdView mAdView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +42,12 @@ public class LaunchActivity extends AbstractActivity {
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
         MobileAds.initialize(this, "ca-app-pub-3858453173804119~8679926603");
+
+        AdView adView = new AdView(this);
+        adView.setAdUnitId("ca-app-pub-3858453173804119/1398959114");
+        mAdView = findViewById(R.id.adView2);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
 
 
         final Button registerNew = findViewById(R.id.button3);

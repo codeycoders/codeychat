@@ -200,6 +200,8 @@ public class ChatsActivity extends AbstractActivity {
             @Override
             public void onClick(View view) {
 
+                startActivity(new Intent(getApplicationContext(), PassJoin.class));
+
             }
         });
 
