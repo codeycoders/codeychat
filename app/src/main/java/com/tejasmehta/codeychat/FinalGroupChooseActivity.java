@@ -1,6 +1,7 @@
 package com.tejasmehta.codeychat;
 
 import android.content.Intent;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -22,6 +23,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 public class FinalGroupChooseActivity extends AppCompatActivity {
 
@@ -91,83 +93,188 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
                     if (groupPass.getText().toString().equals(groupPassConf.getText().toString())) {
 
                         final String name = groupName.getText().toString();
-                        final String email = mAuth.getCurrentUser().getEmail().replace(".", ",");
 
-                        mDatabase.child("chat").child("groups").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                        mDatabase.child("chat").child("groups").addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                final Long countOfGrp = dataSnapshot.getValue(Long.class);
-                                if (countOfGrp != null) {
+                                final Map<String, Object> groupNames = (Map<String, Object>) dataSnapshot.getValue();
+                                if (groupNames != null) {
 
-                                    for (int i = 1; i <= countOfGrp; i++) {
+                                    for(int i = 0; i < groupNames.keySet().size(); i++) {
 
                                         final int num = i;
+                                        if (name.equals(groupNames.keySet().toArray()[i])) {
 
-                                        mDatabase.child("chat").child("groups").child("group" + i).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                            groupN = true;
+
+                                        }
+
+                                        Handler handler = new Handler();
+                                        handler.postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+
+                                             if (num == (groupNames.keySet().size() - 1)) {
+
+                                                 if (groupN) {
+
+                                                     Toast.makeText(FinalGroupChooseActivity.this, "Group Name already in Use", Toast.LENGTH_SHORT).show();
+
+                                                 } else {
+
+                                                     for (int n = 0; n < split.length; n++) {
+
+                                                         final int numero = n;
+
+                                                         mDatabase.child("users").child("c").child("usernameToEmail").child(split[numero].replace(" ", "")).child("email").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                             @Override
+                                                             public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                 String email = dataSnapshot.getValue(String.class);
+                                                                 if (email != null) {
+
+                                                                     mDatabase.child("users").child("c").child("emailToUid").child(email).child("uid").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                         @Override
+                                                                         public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                             String uid = dataSnapshot.getValue(String.class);
+                                                                             mDatabase.child("chat").child("groups").child(name).child("people").child(uid).setValue(split[numero].replace(" ", ""));
+
+                                                                         }
+
+                                                                         @Override
+                                                                         public void onCancelled(DatabaseError databaseError) {
+
+                                                                         }
+                                                                     });
+
+                                                                 }
+
+                                                             }
+
+                                                             @Override
+                                                             public void onCancelled(DatabaseError databaseError) {
+
+                                                             }
+                                                         });
+
+                                                         if (n == split.length - 1) {
+
+                                                             mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                 @Override
+                                                                 public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                     String username = dataSnapshot.getValue(String.class);
+                                                                     if (username != null) {
+
+                                                                         mDatabase.child("chat").child("groups").child(name).child("admin").setValue(username);
+                                                                         mDatabase.child("chat").child("groups").child(name).child("name").setValue(name);
+                                                                         try {
+                                                                             mDatabase.child("chat").child("groups").child(name).child("password").setValue(sha256(groupPass.getText().toString()));
+                                                                         } catch (NoSuchAlgorithmException e) {
+                                                                             e.printStackTrace();
+                                                                         } catch (UnsupportedEncodingException e) {
+                                                                             e.printStackTrace();
+                                                                         }
+
+                                                                         mDatabase.child("chat").child("groups").child("notifRefs").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                             @Override
+                                                                             public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                                 Long countOfGrpNotif = dataSnapshot.getValue(Long.class);
+                                                                                 Log.i("in", "y");
+                                                                                 if (countOfGrpNotif != null) {
+
+                                                                                     Long notfsCnt = countOfGrpNotif + 1;
+
+                                                                                     mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group" + notfsCnt);
+                                                                                     mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(notfsCnt);
+                                                                                     Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                                     newA.putExtra("tab", 2);
+                                                                                     startActivity(newA);
+                                                                                     Log.i("exist", "Y");
+
+                                                                                 } else {
+
+                                                                                     Log.i("exist", "N");
+
+                                                                                     mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group1");
+                                                                                     mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(1);
+                                                                                     Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                                     newA.putExtra("tab", 2);
+                                                                                     startActivity(newA);
+
+                                                                                 }
+
+                                                                             }
+
+                                                                             @Override
+                                                                             public void onCancelled(DatabaseError databaseError) {
+
+                                                                                 mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group1");
+                                                                                 mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(1);
+                                                                                 Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                                 newA.putExtra("tab", 2);
+                                                                                 startActivity(newA);
+
+                                                                             }
+                                                                         });
+
+
+
+                                                                     }
+
+                                                                 }
+
+                                                                 @Override
+                                                                 public void onCancelled(DatabaseError databaseError) {
+
+                                                                 }
+                                                             });
+
+
+
+                                                         }
+
+                                                     }
+
+                                                 }
+
+                                             }
+
+                                            }
+                                        }, 500);
+
+                                    }
+
+                                } else {
+
+                                    for (int n = 0; n < split.length; n++) {
+
+                                        final int numero = n;
+
+                                        mDatabase.child("users").child("c").child("usernameToEmail").child(split[numero].replace(" ", "")).child("email").addListenerForSingleValueEvent(new ValueEventListener() {
                                             @Override
                                             public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                String grpNme  = dataSnapshot.getValue(String.class);
-                                                if (grpNme != null) {
+                                                String email = dataSnapshot.getValue(String.class);
+                                                if (email != null) {
 
-                                                    if (name.equals(grpNme) && num == countOfGrp || groupN) {
+                                                    mDatabase.child("users").child("c").child("emailToUid").child(email).child("uid").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                        @Override
+                                                        public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                        Toast.makeText(FinalGroupChooseActivity.this, "Group Name already in Use", Toast.LENGTH_SHORT).show();
+                                                            String uid = dataSnapshot.getValue(String.class);
+                                                            mDatabase.child("chat").child("groups").child(name).child("people").child(uid).setValue(split[numero].replace(" ", ""));
 
-                                                    } else if (!name.equals(grpNme) && num == countOfGrp) {
+                                                        }
 
-                                                        mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                        @Override
+                                                        public void onCancelled(DatabaseError databaseError) {
 
-                                                                String username = dataSnapshot.getValue(String.class);
-                                                                if (username != null) {
-
-                                                                    int newCnt = Integer.parseInt(String.valueOf(countOfGrp)) + 1;
-
-                                                                    mDatabase.child("chat").child("groups").child("count").setValue(newCnt);
-                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("name").setValue(name);
-                                                                    try {
-                                                                        mDatabase.child("chat").child("groups").child("group" + newCnt).child("password").setValue(sha256(groupPass.getText().toString()));
-                                                                    } catch (NoSuchAlgorithmException e) {
-                                                                        e.printStackTrace();
-                                                                    } catch (UnsupportedEncodingException e) {
-                                                                        e.printStackTrace();
-                                                                    }
-                                                                    for (int i = 0; i < (split.length - 1); i++) {
-
-                                                                        mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i].replace(" ", ""));
-
-                                                                    }
-                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("admin").setValue(username);
-                                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("pplCnt").setValue(split.length - 1);
-
-
-                                                                    Intent nextAct = new Intent(getApplicationContext(), ChatsActivity.class);
-                                                                    nextAct.putExtra("tab", "2");
-                                                                    startActivity(nextAct);
-
-                                                                }
-
-                                                            }
-
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                            }
-                                                        });
-
-
-                                                    } else if (name.equals(grpNme)) {
-
-                                                        groupN = true;
-
-                                                    } else {
-
-
-
-                                                    }
+                                                        }
+                                                    });
 
                                                 }
 
@@ -179,55 +286,83 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
                                             }
                                         });
 
+                                        if (n == split.length - 1) {
+
+                                            mDatabase.child("users").child("c").child("emailToUsername").child(mAuth.getCurrentUser().getEmail().replace(".", ",")).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                @Override
+                                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                    String username = dataSnapshot.getValue(String.class);
+                                                    if (username != null) {
+
+                                                        mDatabase.child("chat").child("groups").child(name).child("admin").setValue(username);
+                                                        mDatabase.child("chat").child("groups").child(name).child("name").setValue(name);
+                                                        try {
+                                                            mDatabase.child("chat").child("groups").child(name).child("password").setValue(sha256(groupPass.getText().toString()));
+                                                        } catch (NoSuchAlgorithmException e) {
+                                                            e.printStackTrace();
+                                                        } catch (UnsupportedEncodingException e) {
+                                                            e.printStackTrace();
+                                                        }
+
+                                                        mDatabase.child("chat").child("groups").child("notifRefs").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                Long countOfGrpNotif = dataSnapshot.getValue(Long.class);
+                                                                Log.i("in", "y");
+                                                                if (countOfGrpNotif != null) {
+
+                                                                    Long notfsCnt = countOfGrpNotif + 1;
+
+                                                                    mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group" + notfsCnt);
+                                                                    mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(notfsCnt);
+                                                                    Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                    newA.putExtra("tab", 2);
+                                                                    startActivity(newA);
+                                                                    Log.i("exist", "Y");
+
+                                                                } else {
+
+                                                                    Log.i("exist", "N");
+
+                                                                    mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group1");
+                                                                    mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(1);
+                                                                    Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                    newA.putExtra("tab", 2);
+                                                                    startActivity(newA);
+
+                                                                }
+
+                                                            }
+
+                                                            @Override
+                                                            public void onCancelled(DatabaseError databaseError) {
+
+                                                                mDatabase.child("chat").child("groups").child("notifRefs").child(name).setValue("group1");
+                                                                mDatabase.child("chat").child("groups").child("notifRefs").child("count").setValue(1);
+                                                                Intent newA = new Intent(getApplicationContext(), ChatsActivity.class);
+                                                                newA.putExtra("tab", 2);
+                                                                startActivity(newA);
+
+                                                            }
+                                                        });
+
+                                                    }
+
+                                                }
+
+                                                @Override
+                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                }
+                                            });
+
+
+
+                                        }
+
                                     }
-
-
-
-
-                                } else {
-
-                                    mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                                        @Override
-                                        public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                            String username = dataSnapshot.getValue(String.class);
-                                            if (username != null) {
-
-                                                int newCnt = 1;
-
-                                                mDatabase.child("chat").child("groups").child("count").setValue(newCnt);
-                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("name").setValue(name);
-                                                try {
-                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("password").setValue(sha256(groupPass.getText().toString()));
-                                                } catch (NoSuchAlgorithmException e) {
-                                                    e.printStackTrace();
-                                                } catch (UnsupportedEncodingException e) {
-                                                    e.printStackTrace();
-                                                }
-                                                for (int i = 0; i < (split.length - 1); i++) {
-
-                                                    mDatabase.child("chat").child("groups").child("group" + newCnt).child("people").child("person" + i).setValue(split[i].replace(" ", ""));
-
-                                                }
-                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("admin").setValue(username);
-                                                mDatabase.child("chat").child("groups").child("group" + newCnt).child("pplCnt").setValue(split.length - 1);
-
-
-
-                                                Intent nextAct = new Intent(getApplicationContext(), ChatsActivity.class);
-                                                nextAct.putExtra("tab", "2");
-                                                startActivity(nextAct);
-
-                                            }
-
-                                        }
-
-                                        @Override
-                                        public void onCancelled(DatabaseError databaseError) {
-
-                                        }
-                                    });
-
 
                                 }
 

@@ -884,51 +884,72 @@ public class ChatsActivity extends AbstractActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
                 RelativeLayout rl = (RelativeLayout) view;
-                TextView groupName = rl.findViewById(R.id.groupName);
-                Intent newAct = new Intent(getApplicationContext(), ChatsViewActivity.class);
-                if (!admin.keySet().isEmpty()) {
+                final TextView groupName = rl.findViewById(R.id.groupName);
+                final Intent newAct = new Intent(getApplicationContext(), ChatsViewActivity.class);
 
-                    newAct.putExtra("name", groupName.getText().toString());
+                mDatabase.child("chat").child("groups").child("notifRefs").child(groupName.getText().toString()).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                    for (int cnt = 0; cnt < admin.keySet().size(); cnt++) {
+                        String groupNames = dataSnapshot.getValue(String.class);
+                        if (groupNames != null) {
 
-                        Log.i("cnt", String.valueOf(cnt));
-                        String[] admins = admin.keySet().toArray(new String[0]);
+                            if (!admin.keySet().isEmpty()) {
 
-                        if (groupName.getText().toString().equals(admins[cnt])) {
+                                newAct.putExtra("name", groupName.getText().toString());
 
-                            newAct.putExtra("admin", true);
-                            Log.i("is", "y");
+                                for (int cnt = 0; cnt < admin.keySet().size(); cnt++) {
 
-                        } else {
+                                    Log.i("cnt", String.valueOf(cnt));
+                                    String[] admins = admin.keySet().toArray(new String[0]);
 
-                            newAct.putExtra("admin", false);
-                            Log.i("not", "y");
+                                    if (groupName.getText().toString().equals(admins[cnt])) {
 
-                        }
+                                        newAct.putExtra("admin", true);
+                                        Log.i("is", "y");
 
-                        if (cnt == (admin.keySet().size() - 1)) {
+                                    } else {
 
-                            Log.i("in", "actStart");
-                            FirebaseMessaging.getInstance().subscribeToTopic(groupToName.get(groupName.getText().toString()));
-                            newAct.putExtra("groupNum", groupToName.get(groupName.getText().toString()));
+                                        newAct.putExtra("admin", false);
+                                        Log.i("not", "y");
 
-                            startActivity(newAct);
+                                    }
+
+                                    if (cnt == (admin.keySet().size() - 1)) {
+
+                                        Log.i("in", "actStart");
+                                        FirebaseMessaging.getInstance().subscribeToTopic(groupNames);
+                                        newAct.putExtra("groupNum", groupName.getText().toString());
+                                        newAct.putExtra("notifTpc", groupNames);
+
+                                        startActivity(newAct);
+
+                                    }
+
+                                }
+
+                            } else {
+
+                                newAct.putExtra("name", groupName.getText().toString());
+                                newAct.putExtra("admin", false);
+                                FirebaseMessaging.getInstance().subscribeToTopic(groupNames);
+                                newAct.putExtra("groupNum", groupName.getText().toString());
+
+                                startActivity(newAct);
+
+                            }
 
                         }
 
                     }
 
-                } else {
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
 
-                    newAct.putExtra("name", groupName.getText().toString());
-                    newAct.putExtra("admin", false);
-                    FirebaseMessaging.getInstance().subscribeToTopic(groupToName.get(groupName.getText().toString()));
-                    newAct.putExtra("groupNum", groupToName.get(groupName.getText().toString()));
+                    }
+                });
 
-                    startActivity(newAct);
 
-                }
 
 
             }
@@ -1065,20 +1086,20 @@ public class ChatsActivity extends AbstractActivity {
                     Log.i("user", "y");
 
                     final String username = dataSnapshot.getValue(String.class);
-                    mDatabase.child("chat").child("groups").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                    mDatabase.child("chat").child("groups").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
 
-                            Long count = dataSnapshot.getValue(Long.class);
+                            final Map<String, Object> count =  (Map<String, Object>)dataSnapshot.getValue();
                             if (count != null) {
 
                                 Log.i("cnt", String.valueOf(count));
-                                for (int i = 1; i <= count; i++) {
+                                for (int i = 0; i < count.keySet().size(); i++) {
 
                                     final int num = i;
                                     Log.i("loop", String.valueOf(i));
 
-                                    mDatabase.child("chat").child("groups").child("group" + i).child("admin").addListenerForSingleValueEvent(new ValueEventListener() {
+                                    mDatabase.child("chat").child("groups").child(count.keySet().toArray()[i].toString()).child("admin").addListenerForSingleValueEvent(new ValueEventListener() {
                                         @Override
                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1089,14 +1110,14 @@ public class ChatsActivity extends AbstractActivity {
 
                                                     Log.i("admin" + num, adminName);
 
-                                                    mDatabase.child("chat").child("groups").child("group" + num).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
                                                         @Override
                                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
                                                             final String lastMessage = dataSnapshot.getValue(String.class);
                                                             if (lastMessage != null) {
 
-                                                                mDatabase.child("chat").child("groups").child("group" + num).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
                                                                     @Override
                                                                     public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1122,7 +1143,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                             } else {
 
-                                                                mDatabase.child("chat").child("groups").child("group" + num).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
                                                                     @Override
                                                                     public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1161,7 +1182,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                 } else {
 
-                                                    mDatabase.child("chat").child("groups").child("group" + num).child("people").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("people").addListenerForSingleValueEvent(new ValueEventListener() {
                                                         @Override
                                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1173,14 +1194,14 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                     if (username.equals(peopleUsers[i])) {
 
-                                                                        mDatabase.child("chat").child("groups").child("group" + num).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                        mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
                                                                             @Override
                                                                             public void onDataChange(DataSnapshot dataSnapshot) {
 
                                                                                 final String lastMessage = dataSnapshot.getValue(String.class);
                                                                                 if (lastMessage != null) {
 
-                                                                                    mDatabase.child("chat").child("groups").child("group" + num).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                                    mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
                                                                                         @Override
                                                                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1206,7 +1227,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 } else {
 
-                                                                                    mDatabase.child("chat").child("groups").child("group" + num).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                                    mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
                                                                                         @Override
                                                                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1266,14 +1287,13 @@ public class ChatsActivity extends AbstractActivity {
                                         }
                                     });
 
-                                    if (i == count) {
+                                    if (i == count.keySet().size() - 1) {
 
                                         groupAdapter.notifyDataSetChanged();
 
                                     }
 
                                 }
-
 
                             }
 
