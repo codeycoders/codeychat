@@ -63,7 +63,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                                     Log.i("notis", "yyyy");
 
-                                    sendMyNotification(message.getData().get("message"), message.getData().get("title"), message.getData().get("tab"));
+                                    sendMyNotification(message.getNotification().getBody(), message.getNotification().getTitle(), message.getData().get("tab"));
 
                                 }
 
@@ -94,7 +94,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                                 if (!username.equals(split[1])) {
 
-                                    sendMyNotification(message.getData().get("message"), message.getData().get("title"), message.getData().get("tab"));
+                                    sendMyNotification(message.getNotification().getBody(), message.getNotification().getTitle(), message.getData().get("tab"));
 
                                 }
 
