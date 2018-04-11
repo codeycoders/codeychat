@@ -4,14 +4,14 @@ package com.tejasmehta.codeychat;
  * Created by tejasmehta on 2/21/18.
  */
 
-public class chatBubble {
+public class ChatBubble {
 
 
         private String msg;
         private String date;
         private String msgType;
 
-        public chatBubble(String msg, String date, String msgType) {
+        public ChatBubble(String msg, String date, String msgType) {
             this.msg = msg;
             this.date = date;
             this.msgType = msgType;

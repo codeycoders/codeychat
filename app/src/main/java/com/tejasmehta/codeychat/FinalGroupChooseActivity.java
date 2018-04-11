@@ -119,7 +119,7 @@ public class FinalGroupChooseActivity extends AppCompatActivity {
 
                                                  if (groupN) {
 
-                                                     Toast.makeText(FinalGroupChooseActivity.this, "Group Name already in Use", Toast.LENGTH_SHORT).show();
+                                                     Toast.makeText(FinalGroupChooseActivity.this, "Group getName already in Use", Toast.LENGTH_SHORT).show();
 
                                                  } else {
 

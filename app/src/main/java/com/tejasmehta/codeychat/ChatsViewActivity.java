@@ -42,12 +42,15 @@ public class ChatsViewActivity extends AppCompatActivity {
     Boolean firstClick = true;
     ListView listView;
     EditText msgContent;
-    ArrayList<chatBubble> objects;
+    ArrayList<ChatBubble> objects;
     CustomAdapter customAdapter;
     Boolean filter;
     Boolean onLoad = true;
     Button sendMsg;
     String emailSHA;
+    String notif;
+    Long epochT;
+    Boolean group;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,20 +68,51 @@ public class ChatsViewActivity extends AppCompatActivity {
         customAdapter = new CustomAdapter(this, objects);
         listView.setAdapter(customAdapter);
         listView.setDivider(null);
-        try {
-            name = getIntent().getExtras().getString("name");
-            admin = getIntent().getExtras().getString("admin");
-            groupNum = getIntent().getExtras().getString("groupNum");
 
-        } catch (Exception e) {
+        group = getIntent().getExtras().getBoolean("chatType");
+        notif = getIntent().getExtras().get("notif").toString();
+
+        if (group) {
+
+            name = getIntent().getExtras().get("name").toString();
+            admin = getIntent().getExtras().get("admin").toString();
+            groupNum = getIntent().getExtras().get("groupNum").toString();
+
+
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(name);
+
+            GroupChatGetMsg();
+
+
+            if (mAuth.getCurrentUser() != null) {
+
+                mDatabase.child("chat").child("groups").child(name).child("recentMsg").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                        if (dataSnapshot.getValue(Long.class) != null) {
+
+                            epochT = dataSnapshot.getValue(Long.class);
+
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+
+            }
+
+        } else {
+
+            name = getIntent().getExtras().get("name").toString();
 
 
         }
-
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle(name);
-
-        PublicChat();
 
         msgContent.setOnClickListener(new View.OnClickListener() {
 
@@ -89,6 +123,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
             }
         });
+
 
         msgContent.setOnKeyListener(new View.OnKeyListener() {
             @Override
@@ -110,621 +145,652 @@ public class ChatsViewActivity extends AppCompatActivity {
                 final String msg = msgContent.getText().toString();
                 final String msgLower = msg.toLowerCase();
 
+                if (group) {
 
-                if (mAuth.getCurrentUser() != null) {
+                    if (mAuth.getCurrentUser() != null) {
 
 
-                    final String uid = mAuth.getCurrentUser().getUid();
-                    final String email = mAuth.getCurrentUser().getEmail().replace(".", ",");
-                    mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(DataSnapshot dataSnapshot) {
+                        final String uid = mAuth.getCurrentUser().getUid();
+                        final String email = mAuth.getCurrentUser().getEmail().replace(".", ",");
+                        mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot dataSnapshot) {
 
-                            final String username = dataSnapshot.getValue(String.class);
-                            if (username != null) {
+                                final String username = dataSnapshot.getValue(String.class);
+                                if (username != null) {
 
-                                Log.i("test", "in");
+                                    Log.i("test", "in");
 
-                                try {
-                                    emailSHA = sha256(mAuth.getCurrentUser().getEmail());
-                                } catch (NoSuchAlgorithmException e) {
-                                    e.printStackTrace();
-                                } catch (UnsupportedEncodingException e) {
-                                    e.printStackTrace();
-                                }
-
-                                if (emailSHA.equals("e95f5a1b9b51735c91297cc9aef9ca0bda53d3a7f5818cbb406244132688ffba") || emailSHA.equals("5c6f46d3354efa78707c19ade5b3c59f9ce20de97da510d322bbe6c9dfac3795")) {
-
-                                    Log.i("superUser", "YASSS");
-                                    if (filter) {
-
-
-                                        if (msgLower.contains("fuck") || msgLower.contains("shit") || msgLower.contains("slut") || msgLower.contains("fu") || msgLower.contains("ass ") || msgLower.contains("bitch") || msgLower.contains("fuq") || msgLower.contains("cock") || msgLower.contains("pussy") || msgLower.contains("asshole") || msgLower.contains("whore")) {
-
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Language!")
-                                                    .setMessage("No Profane Language! If You Must, Turn The Filter off With '!filter'")
-                                                    .setPositiveButton("Ok", null).show();
-                                            msgContent.setText("");
-
-                                        } else if (msg.equals("")) {
-
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Message is empty!")
-                                                    .setMessage("Your Message Needs some Sort of Content!")
-                                                    .setPositiveButton("Ok", null).show();
-
-                                        } else if (msg.equals("!filter")) {
-
-                                            filter = false;
-                                            Log.i("grp", String.valueOf(groupNum));
-                                            mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
-
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-
-                                                            }
-                                                        });
-
-                                                    } else {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
-
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-
-                                                            }
-                                                        });
-
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-                                            Log.i("filter", filter.toString());
-
-                                        } else {
-
-
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
-
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                Long countOfMsg = dataSnapshot.getValue(Long.class);
-                                                                if (countOfMsg != null) {
-                                                                    int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
-
-
-                                                                } else {
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
-
-
-                                                                }
-
-                                                            }
-
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                            }
-                                                        });
-
-                                                    } else {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                        msgContent.setText("");
-
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-
-                                        }
-
-
-                                    } else if (!filter) {
-
-                                        if (msg.equals("")) {
-
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Message is empty!")
-                                                    .setMessage("Your Message Needs some Sort of Content!")
-                                                    .setPositiveButton("Ok", null).show();
-
-                                        } else if (msg.equals("!filter")) {
-
-                                            filter = true;
-                                            mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
-
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-
-                                                            }
-                                                        });
-
-                                                    } else {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
-
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-
-                                                                listView.setSelection(customAdapter.getCount() - 1);
-
-                                                            }
-                                                        });
-
-                                                    }
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-
-                                            Log.i("filter", filter.toString());
-
-                                        } else {
-
-
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
-
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                Long countOfMsg = dataSnapshot.getValue(Long.class);
-                                                                if (countOfMsg != null) {
-                                                                    int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
-
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
-
-
-                                                                } else {
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
-
-
-                                                                }
-
-                                                            }
-
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                            }
-                                                        });
-
-
-                                                    } else {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                        msgContent.setText("");
-
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-
-                                                }
-                                            });
-
-                                        }
-
+                                    try {
+                                        emailSHA = sha256(mAuth.getCurrentUser().getEmail());
+                                    } catch (NoSuchAlgorithmException e) {
+                                        e.printStackTrace();
+                                    } catch (UnsupportedEncodingException e) {
+                                        e.printStackTrace();
                                     }
 
-                                } else {
+                                    if (emailSHA.equals("e95f5a1b9b51735c91297cc9aef9ca0bda53d3a7f5818cbb406244132688ffba") || emailSHA.equals("5c6f46d3354efa78707c19ade5b3c59f9ce20de97da510d322bbe6c9dfac3795")) {
 
-                                    if (filter) {
+                                        Log.i("superUser", "YASSS");
+                                        if (filter) {
 
 
-                                        if (msgLower.contains("fuck") || msgLower.contains("shit") || msgLower.contains("slut") || msgLower.contains("fu") || msgLower.contains("ass ") || msgLower.contains("bitch") || msgLower.contains("fuq") || msgLower.contains("cock") || msgLower.contains("pussy") || msgLower.contains("asshole") || msgLower.contains("whore")) {
+                                            if (msgLower.contains("fuck") || msgLower.contains("shit") || msgLower.contains("slut") || msgLower.contains("fu") || msgLower.contains("ass ") || msgLower.contains("bitch") || msgLower.contains("fuq") || msgLower.contains("cock") || msgLower.contains("pussy") || msgLower.contains("asshole") || msgLower.contains("whore")) {
 
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Language!")
-                                                    .setMessage("No Profane Language! If You Must, Turn The Filter off With '!filter'")
-                                                    .setPositiveButton("Ok", null).show();
-                                            msgContent.setText("");
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Language!")
+                                                        .setMessage("No Profane Language! If You Must, Turn The Filter off With '!filter'")
+                                                        .setPositiveButton("Ok", null).show();
+                                                msgContent.setText("");
 
-                                        } else if (msg.equals("")) {
+                                            } else if (msg.equals("")) {
 
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Message is empty!")
-                                                    .setMessage("Your Message Needs some Sort of Content!")
-                                                    .setPositiveButton("Ok", null).show();
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Message is empty!")
+                                                        .setMessage("Your Message Needs some Sort of Content!")
+                                                        .setPositiveButton("Ok", null).show();
 
-                                        } else if (msg.equals("!filter")) {
+                                            } else if (msg.equals("!filter")) {
 
-                                            filter = false;
-                                            mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                                filter = false;
+                                                Log.i("grp", String.valueOf(groupNum));
+                                                mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
 
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
 
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
 
-                                                                listView.setSelection(customAdapter.getCount() - 1);
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
 
-                                                            }
-                                                        });
+                                                                }
+                                                            });
 
-                                                    } else {
+                                                        } else {
 
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
 
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
 
-                                                                listView.setSelection(customAdapter.getCount() - 1);
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
 
-                                                            }
-                                                        });
+                                                                }
+                                                            });
+
+                                                        }
 
                                                     }
 
-                                                }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
 
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
+                                                    }
+                                                });
+                                                Log.i("filter", filter.toString());
 
-                                                }
-                                            });
-                                            Log.i("filter", filter.toString());
-
-                                        } else {
-
-                                            Log.i("sending", "y");
-
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
-
-                                                        Log.i("msg", "y");
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                                                Long countOfMsg = dataSnapshot.getValue(Long.class);
-                                                                if (countOfMsg != null) {
-                                                                    int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
+                                            } else {
 
 
-                                                                } else {
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                                    Log.i("cnt", "null");
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
 
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                @Override
+                                                                public void onDataChange(DataSnapshot dataSnapshot) {
 
+                                                                    Long countOfMsg = dataSnapshot.getValue(Long.class);
+                                                                    if (countOfMsg != null) {
+                                                                        int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    } else {
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    }
 
                                                                 }
 
-                                                            }
+                                                                @Override
+                                                                public void onCancelled(DatabaseError databaseError) {
 
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
+                                                                }
+                                                            });
 
-                                                            }
-                                                        });
+                                                        } else {
 
-                                                    } else {
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                            long epoch = System.currentTimeMillis();
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                            msgContent.setText("");
 
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                        msgContent.setText("");
+                                                        }
 
                                                     }
 
-                                                }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
 
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
+                                                    }
+                                                });
 
-                                                }
-                                            });
+                                            }
+
+
+                                        } else if (!filter) {
+
+                                            if (msg.equals("")) {
+
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Message is empty!")
+                                                        .setMessage("Your Message Needs some Sort of Content!")
+                                                        .setPositiveButton("Ok", null).show();
+
+                                            } else if (msg.equals("!filter")) {
+
+                                                filter = true;
+                                                mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
+
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        } else {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
+
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        }
+                                                    }
+
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                    }
+                                                });
+
+                                                Log.i("filter", filter.toString());
+
+                                            } else {
+
+
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
+
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                @Override
+                                                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                    Long countOfMsg = dataSnapshot.getValue(Long.class);
+                                                                    if (countOfMsg != null) {
+                                                                        int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
+
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    } else {
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    }
+
+                                                                }
+
+                                                                @Override
+                                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                                }
+                                                            });
+
+
+                                                        } else {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                            long epoch = System.currentTimeMillis();
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                            msgContent.setText("");
+
+                                                        }
+
+                                                    }
+
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                    }
+                                                });
+
+                                            }
 
                                         }
-
 
                                     } else {
 
-                                        if (msg.equals("")) {
+                                        if (filter) {
 
-                                            new AlertDialog.Builder(ChatsViewActivity.this)
-                                                    .setTitle("Message is empty!")
-                                                    .setMessage("Your Message Needs some Sort of Content!")
-                                                    .setPositiveButton("Ok", null).show();
 
-                                        } else if (msg.equals("!filter")) {
+                                            if (msgLower.contains("fuck") || msgLower.contains("shit") || msgLower.contains("slut") || msgLower.contains("fu") || msgLower.contains("ass ") || msgLower.contains("bitch") || msgLower.contains("fuq") || msgLower.contains("cock") || msgLower.contains("pussy") || msgLower.contains("asshole") || msgLower.contains("whore")) {
 
-                                            filter = true;
-                                            mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Language!")
+                                                        .setMessage("No Profane Language! If You Must, Turn The Filter off With '!filter'")
+                                                        .setPositiveButton("Ok", null).show();
+                                                msgContent.setText("");
 
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
+                                            } else if (msg.equals("")) {
 
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Message is empty!")
+                                                        .setMessage("Your Message Needs some Sort of Content!")
+                                                        .setPositiveButton("Ok", null).show();
 
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
+                                            } else if (msg.equals("!filter")) {
 
-                                                                listView.setSelection(customAdapter.getCount() - 1);
+                                                filter = false;
+                                                mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                            }
-                                                        });
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
 
-                                                    } else {
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
 
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
-                                                        objects.add(ChatBubble);
-                                                        msgContent.setText("");
-                                                        customAdapter.notifyDataSetChanged();
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
 
-                                                        listView.post(new Runnable() {
-                                                            @Override
-                                                            public void run() {
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
 
-                                                                listView.setSelection(customAdapter.getCount() - 1);
+                                                                }
+                                                            });
 
-                                                            }
-                                                        });
+                                                        } else {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
+
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        }
 
                                                     }
 
-                                                }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
 
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
+                                                    }
+                                                });
+                                                Log.i("filter", filter.toString());
 
-                                                }
-                                            });
+                                            } else {
 
-                                            Log.i("filter", filter.toString());
+                                                Log.i("sending", "y");
 
-                                        } else {
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
 
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
 
-                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                                            Log.i("msg", "y");
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                @Override
+                                                                public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                    final String lastMessage = dataSnapshot.getValue(String.class);
-                                                    if (lastMessage != null) {
+                                                                    Long countOfMsg = dataSnapshot.getValue(Long.class);
+                                                                    if (countOfMsg != null) {
+                                                                        int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
 
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
 
-                                                                Long countOfMsg = dataSnapshot.getValue(Long.class);
-                                                                if (countOfMsg != null) {
-                                                                    int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
-
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
-
-
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
 
 
-                                                                } else {
+                                                                    } else {
 
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
+                                                                        Log.i("cnt", "null");
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
 
-                                                                    SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                                    String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                                    mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                                    msgContent.setText("");
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
 
+
+                                                                    }
 
                                                                 }
 
-                                                            }
+                                                                @Override
+                                                                public void onCancelled(DatabaseError databaseError) {
 
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
+                                                                }
+                                                            });
 
-                                                            }
-                                                        });
+                                                        } else {
 
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                            long epoch = System.currentTimeMillis();
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                            msgContent.setText("");
 
-                                                    } else {
-
-                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
-                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
-                                                        msgContent.setText("");
+                                                        }
 
                                                     }
 
-                                                }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
 
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
+                                                    }
+                                                });
 
-                                                }
-                                            });
+                                            }
+
+
+                                        } else {
+
+                                            if (msg.equals("")) {
+
+                                                new AlertDialog.Builder(ChatsViewActivity.this)
+                                                        .setTitle("Message is empty!")
+                                                        .setMessage("Your Message Needs some Sort of Content!")
+                                                        .setPositiveButton("Ok", null).show();
+
+                                            } else if (msg.equals("!filter")) {
+
+                                                filter = true;
+                                                mDatabase.child("users").child(uid).child("filter").setValue(filter.toString());
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
+
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        } else {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
+                                                            objects.add(ChatBubble);
+                                                            msgContent.setText("");
+                                                            customAdapter.notifyDataSetChanged();
+
+                                                            listView.post(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+
+                                                                    listView.setSelection(customAdapter.getCount() - 1);
+
+                                                                }
+                                                            });
+
+                                                        }
+
+                                                    }
+
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                    }
+                                                });
+
+                                                Log.i("filter", filter.toString());
+
+                                            } else {
+
+
+                                                mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                        final String lastMessage = dataSnapshot.getValue(String.class);
+                                                        if (lastMessage != null) {
+
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                @Override
+                                                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                    Long countOfMsg = dataSnapshot.getValue(Long.class);
+                                                                    if (countOfMsg != null) {
+                                                                        int msgs = Integer.parseInt(String.valueOf(countOfMsg)) + 1;
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message" + msgs).setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(msgs);
+
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    } else {
+
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("dumpedMessages").child("message1").setValue(lastMessage);
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("msgDump").child("count").setValue(1);
+
+                                                                        SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                                        String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                        String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                                        long epoch = System.currentTimeMillis();
+                                                                        mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                                        msgContent.setText("");
+
+
+                                                                    }
+
+                                                                }
+
+                                                                @Override
+                                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                                }
+                                                            });
+
+
+                                                        } else {
+
+                                                            SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
+                                                            String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                            String msgToSend = timeComp + ": <" + username + "> " + msg;
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("message").child("msg").setValue(msgToSend);
+                                                            long epoch = System.currentTimeMillis();
+                                                            mDatabase.child("chat").child("groups").child(groupNum).child("recentMsg").setValue(epoch);
+                                                            msgContent.setText("");
+
+                                                        }
+
+                                                    }
+
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                    }
+                                                });
+
+                                            }
 
                                         }
 
                                     }
 
+                                    Log.i("message", msg);
+
+
                                 }
-
-                                Log.i("message", msg);
-
 
                             }
 
-                        }
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
 
-                        @Override
-                        public void onCancelled(DatabaseError databaseError) {
+                            }
+                        });
 
-                        }
-                    });
+                    }
+
+                } else {
+
+
 
                 }
 
@@ -736,8 +802,22 @@ public class ChatsViewActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        Log.d("CDA", "onBackPressed Called");
-        finish();
+        if (notif.equals("true")) {
+
+            Log.i("calle", "y");
+            Intent chat = new Intent(this, ChatsActivity.class);
+            chat.putExtra("tab", 2);
+            chat.putExtra("clear", false);
+            startActivity(chat);
+
+        } else {
+
+            Intent intent = new Intent();
+            intent.putExtra("epochRecent", epochT);
+            setResult(RESULT_OK, intent);
+            finish();
+
+        }
     }
 
     String sha256(String textToHash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
@@ -765,7 +845,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
     }
 
-    public void PublicChat() {
+    public void GroupChatGetMsg() {
 
         objects.clear();
 
@@ -865,12 +945,12 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
 
@@ -878,7 +958,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -916,13 +996,13 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
 
@@ -930,7 +1010,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
 
 
@@ -1011,13 +1091,13 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
 
@@ -1025,7 +1105,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                             objects.add(chat);
 
 
@@ -1064,12 +1144,12 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
 
@@ -1077,7 +1157,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                             objects.add(chat);
 
 
@@ -1128,19 +1208,19 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                         if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                             objects.add(chat);
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                             objects.add(chat);
 
                                                                                         }
 
                                                                                     } else {
 
-                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                         objects.add(chat);
 
 
@@ -1261,19 +1341,19 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 }
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -1311,19 +1391,19 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
                                                                                 }
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -1405,19 +1485,19 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add( chat);
 
                                                                                             }
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                             objects.add( chat);
 
 
@@ -1456,12 +1536,12 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
 
@@ -1469,7 +1549,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                             objects.add( chat);
 
                                                                                         }
@@ -1519,13 +1599,13 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                         if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                             objects.add(chat);
 
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                             objects.add( chat);
 
 
@@ -1533,7 +1613,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                     } else {
 
-                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                         objects.add( chat);
 
                                                                                     }
@@ -1657,7 +1737,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -1669,7 +1749,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -1683,7 +1763,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -1728,7 +1808,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -1740,7 +1820,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -1754,7 +1834,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -1801,7 +1881,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -1813,7 +1893,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -1827,7 +1907,7 @@ public class ChatsViewActivity extends AppCompatActivity {
 
                                                                         } else {
 
-                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                             objects.add(chat);
                                                                             customAdapter.notifyDataSetChanged();
                                                                             listView.post(new Runnable() {
@@ -1924,15 +2004,33 @@ public class ChatsViewActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp(){
-        finish();
+
+        Log.i("calle", "y");
+        if (notif.equals("true")) {
+
+            Log.i("calle", "y");
+            Intent chat = new Intent(this, ChatsActivity.class);
+            chat.putExtra("tab", 2);
+            chat.putExtra("clear", false);
+            startActivity(chat);
+
+        } else {
+
+            Intent intent = new Intent();
+            intent.putExtra("epochRecent", epochT);
+            setResult(RESULT_OK, intent);
+            finish();
+
+        }
         return true;
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
 
-        getMenuInflater().inflate(R.menu.basic_menu, menu);
-
+        getMenuInflater().inflate(R.menu.basic_no_search, menu);
         return true;
 
     }

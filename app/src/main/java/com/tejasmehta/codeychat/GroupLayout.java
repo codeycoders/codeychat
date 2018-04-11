@@ -4,17 +4,17 @@ package com.tejasmehta.codeychat;
  * Created by tejasmehta on 3/1/18.
  */
 
-public class groupLayout {
+public class GroupLayout {
 
     private String name;
     private String lastMsg;
 
-    public groupLayout(String name, String lastMsg) {
+    public GroupLayout(String name, String lastMsg) {
         this.name = name;
         this.lastMsg = lastMsg;
     }
 
-    public String Name() {
+    public String getName() {
         return name;
     }
 

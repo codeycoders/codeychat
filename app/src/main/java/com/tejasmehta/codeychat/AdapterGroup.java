@@ -1,7 +1,6 @@
 package com.tejasmehta.codeychat;
 
 import android.content.Context;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,7 +16,7 @@ import java.util.ArrayList;
 public class AdapterGroup extends BaseAdapter {
 
     private LayoutInflater inflater;
-    private ArrayList<groupLayout> objects;
+    private ArrayList<GroupLayout> objects;
     int layout;
 
     private class ViewHolder {
@@ -25,7 +24,7 @@ public class AdapterGroup extends BaseAdapter {
         TextView lastMsg;
     }
 
-    public AdapterGroup(Context context, ArrayList<groupLayout> objects) {
+    public AdapterGroup(Context context, ArrayList<GroupLayout> objects) {
         inflater = LayoutInflater.from(context);
         this.objects = objects;
     }
@@ -34,7 +33,7 @@ public class AdapterGroup extends BaseAdapter {
         return objects.size();
     }
 
-    public groupLayout getItem(int position) {
+    public GroupLayout getItem(int position) {
         return objects.get(position);
     }
 
@@ -54,7 +53,7 @@ public class AdapterGroup extends BaseAdapter {
         } else {
             holder = (ViewHolder) convertView.getTag();
         }
-        holder.name.setText(objects.get(position).Name());
+        holder.name.setText(objects.get(position).getName());
         holder.lastMsg.setText(objects.get(position).LastMsg());
         return convertView;
     }

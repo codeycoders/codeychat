@@ -1,34 +1,14 @@
 package com.tejasmehta.codeychat;
 
-import android.app.Activity;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.RemoteInput;
-import android.app.TaskStackBuilder;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.widget.Toolbar;
 import android.text.InputType;
-import android.util.Base64;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,17 +17,12 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
-import android.widget.ScrollView;
 import android.widget.TabHost;
-import android.widget.TableLayout;
-import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
@@ -69,10 +44,12 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class ChatsActivity extends AbstractActivity {
 
@@ -88,20 +65,28 @@ public class ChatsActivity extends AbstractActivity {
     Boolean filter;
     String extraVal;
     EditText msgContent;
-    ArrayList<chatBubble> objects;
+    ArrayList<ChatBubble> objects;
     CustomAdapter customAdapter;
     FloatingActionButton fab;
     FloatingActionButton fabPassJ;
     ListView groupList;
-    ArrayList<groupLayout> groups;
+    ArrayList<GroupLayout> groups;
     AdapterGroup groupAdapter;
     Map<String, Boolean> admin;
     Map<String, Boolean> groupMember;
     Map<String, String> groupToName;
+    Map<String, String> groupToLastMsg;
+    SortedMap<Long, String> epochTimeToGrp;
+    Map<String, Long> groupToEpoch;
+    String clear = "false";
+    ListView chatList;
+    ArrayList<GroupLayout> chats;
+    AdapterGroup chatsAdapter;
     int clickCnt = 0;
     ValueEventListener mListener;
     private AdView mAdView;
     CoordinatorLayout cl;
+    Boolean notifReturn = false;
 
 
 
@@ -135,12 +120,24 @@ public class ChatsActivity extends AbstractActivity {
         fabPassJ = findViewById(R.id.floatingActionButton);
         fabPassJ.hide();
         groupToName = new HashMap<>();
+        epochTimeToGrp = new TreeMap<>(new ReverseComparator());
+        groupToLastMsg = new HashMap<>();
+        groupToEpoch = new HashMap<>();
         listView.setDivider(null);
+        chatList = findViewById(R.id.chatsList);
+        chats = new ArrayList<>();
+        chatsAdapter = new AdapterGroup(this, groups);
         cl = findViewById(R.id.cl);
 
 
         try {
-            extraVal = getIntent().getExtras().getString("tab");
+            extraVal = getIntent().getExtras().get("tab").toString();
+            if (getIntent().getExtras().get("clear") != null) {
+
+                clear = getIntent().getExtras().get("clear").toString();
+
+            }
+
         }catch(Exception e) {
 
 
@@ -156,6 +153,12 @@ public class ChatsActivity extends AbstractActivity {
         mAdView = findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
         mAdView.loadAd(adRequest);
+        mAdView.setVisibility(View.VISIBLE);
+
+        RelativeLayout.LayoutParams params= new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
+        params.addRule(RelativeLayout.ABOVE, R.id.adView);
+        cl.setLayoutParams(params);
+
 
 
         host.setup();
@@ -188,7 +191,7 @@ public class ChatsActivity extends AbstractActivity {
 
                 } else {
 
-
+                    startActivity(new Intent(getApplicationContext(), ChatCreateActivity.class));
 
                 }
 
@@ -215,12 +218,12 @@ public class ChatsActivity extends AbstractActivity {
 
             if (extraVal.equals("3")) {
 
-                host.setCurrentTab(count - 1);
+                host.setCurrentTab(2);
                 PublicTest();
 
             } else if (extraVal.equals("2")) {
 
-                host.setCurrentTab(count - 2);
+                host.setCurrentTab(1);
                 GroupChat();
 
             }
@@ -317,7 +320,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -335,7 +338,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -445,7 +448,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -463,7 +466,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -588,7 +591,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -606,7 +609,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: false", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: false", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -665,8 +668,11 @@ public class ChatsActivity extends AbstractActivity {
                                                                     mDatabase.child("chat").child("publicDump").child("count").setValue(1);
 
                                                                     SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
-                                                                    String timeComp = time_format.format(Calendar.getInstance().getTime());
+                                                                    long millisec = System.currentTimeMillis();
+
+                                                                    String timeComp = time_format.format(new java.util.Date(millisec));
                                                                     String msgToSend = timeComp + ": <" + username + "> " + msg;
+
                                                                     mDatabase.child("chat").child("message").child("msg").setValue(msgToSend);
                                                                     msgContent.setText("");
 
@@ -716,7 +722,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -734,7 +740,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                         SimpleDateFormat time_format = new SimpleDateFormat("HH:mm:ss");
                                                         String timeComp = time_format.format(Calendar.getInstance().getTime());
-                                                        chatBubble ChatBubble = new chatBubble("Filter: true", timeComp, "server");
+                                                        ChatBubble ChatBubble = new ChatBubble("Filter: true", timeComp, "server");
                                                         objects.add(ChatBubble);
                                                         msgContent.setText("");
                                                         customAdapter.notifyDataSetChanged();
@@ -856,9 +862,8 @@ public class ChatsActivity extends AbstractActivity {
 
                 if (s.equals("Chats")) {
 
-                    fab.show();
-                    tab = 1;
-                    fabPassJ.hide();
+                    Chats();
+
 
                 } else if (s.equals("GroupChats")) {
 
@@ -887,6 +892,7 @@ public class ChatsActivity extends AbstractActivity {
                 final TextView groupName = rl.findViewById(R.id.groupName);
                 final Intent newAct = new Intent(getApplicationContext(), ChatsViewActivity.class);
 
+                newAct.putExtra("notif", "false");
                 mDatabase.child("chat").child("groups").child("notifRefs").child(groupName.getText().toString()).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
@@ -921,9 +927,9 @@ public class ChatsActivity extends AbstractActivity {
                                         FirebaseMessaging.getInstance().subscribeToTopic(groupNames);
                                         newAct.putExtra("groupNum", groupName.getText().toString());
                                         newAct.putExtra("notifTpc", groupNames);
+                                        newAct.putExtra("chatType", true);
 
-                                        startActivity(newAct);
-
+                                        startActivityForResult(newAct, 1);
                                     }
 
                                 }
@@ -934,8 +940,10 @@ public class ChatsActivity extends AbstractActivity {
                                 newAct.putExtra("admin", false);
                                 FirebaseMessaging.getInstance().subscribeToTopic(groupNames);
                                 newAct.putExtra("groupNum", groupName.getText().toString());
+                                newAct.putExtra("notifTpc", groupNames);
+                                newAct.putExtra("chatType", true);
 
-                                startActivity(newAct);
+                                startActivityForResult(newAct, 1);
 
                             }
 
@@ -955,6 +963,21 @@ public class ChatsActivity extends AbstractActivity {
             }
         });
         
+
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (tab == 3) {
+            PublicTest();
+        } else if (tab == 2) {
+            if (notifReturn) {
+                GroupChat();
+                notifReturn = false;
+                Log.i("notifs", "true");
+            }
+        }
 
     }
 
@@ -1027,6 +1050,8 @@ public class ChatsActivity extends AbstractActivity {
         fabPassJ.show();
         tab = 2;
         clickCnt = 0;
+        Log.i("epoch", epochTimeToGrp.keySet().toString());
+
         groups.clear();
         groupList.post(new Runnable() {
             @Override
@@ -1035,6 +1060,14 @@ public class ChatsActivity extends AbstractActivity {
             }
         });
 
+        if (clear.equals("true")) {
+
+            Log.i("clr", "y");
+
+            epochTimeToGrp.clear();
+            groupToLastMsg.clear();
+
+        }
 
         RelativeLayout.LayoutParams params= new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
         params.addRule(RelativeLayout.ABOVE, R.id.adView);
@@ -1110,6 +1143,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                     Log.i("admin" + num, adminName);
 
+
                                                     mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
                                                         @Override
                                                         public void onDataChange(DataSnapshot dataSnapshot) {
@@ -1121,15 +1155,41 @@ public class ChatsActivity extends AbstractActivity {
                                                                     @Override
                                                                     public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                                        String grpName = dataSnapshot.getValue(String.class);
+                                                                        final String grpName = dataSnapshot.getValue(String.class);
                                                                         if (grpName != null) {
 
-                                                                            groupLayout group = new groupLayout(grpName, lastMessage);
+                                                                            mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("recentMsg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                                @Override
+                                                                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                                    Long msgTime = dataSnapshot.getValue(Long.class);
+                                                                                    if (msgTime != null) {
+
+                                                                                        epochTimeToGrp.put(msgTime, grpName);
+                                                                                        groupToLastMsg.put(grpName, lastMessage);
+
+
+
+                                                                                    }
+
+                                                                                }
+
+                                                                                @Override
+                                                                                public void onCancelled(DatabaseError databaseError) {
+
+                                                                                }
+                                                                            });
+
+                                                                            /*
+
+                                                                            GroupLayout group = new GroupLayout(grpName, lastMessage);
                                                                             groups.add(group);
                                                                             admin.put(grpName, true);
                                                                             groupToName.put(grpName, "group" + num);
                                                                             Log.i("groups", grpName);
                                                                             groupAdapter.notifyDataSetChanged();
+
+                                                                            */
 
                                                                         }
 
@@ -1150,14 +1210,23 @@ public class ChatsActivity extends AbstractActivity {
                                                                         String grpName = dataSnapshot.getValue(String.class);
                                                                         if (grpName != null) {
 
+                                                                            epochTimeToGrp.put(0L, grpName);
+                                                                            groupToLastMsg.put(grpName, "N/A");
+                                                                            groupToEpoch.put(grpName, 0L);
+
+
                                                                             Log.i("m", String.valueOf(num));
 
-                                                                            groupLayout group = new groupLayout(grpName, "N/A");
+                                                                            /*
+
+                                                                            GroupLayout group = new GroupLayout(grpName, lastMessage);
                                                                             groups.add(group);
-                                                                            admin.put(grpName, true);
+                                                                            groupMember.put(grpName, true);
                                                                             groupToName.put(grpName, "group" + num);
-                                                                            Log.i("groups", grpName);
+                                                                            Log.i("groups", groups.toString());
                                                                             groupAdapter.notifyDataSetChanged();
+
+                                                                            */
 
 
                                                                         }
@@ -1194,7 +1263,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                     if (username.equals(peopleUsers[i])) {
 
-                                                                        mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("message").child("msg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                        mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("message").child("msg").addValueEventListener(new ValueEventListener() {
                                                                             @Override
                                                                             public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -1205,15 +1274,40 @@ public class ChatsActivity extends AbstractActivity {
                                                                                         @Override
                                                                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
-                                                                                            String grpName = dataSnapshot.getValue(String.class);
+                                                                                            final String grpName = dataSnapshot.getValue(String.class);
                                                                                             if (grpName != null) {
 
-                                                                                                groupLayout group = new groupLayout(grpName, lastMessage);
+                                                                                                mDatabase.child("chat").child("groups").child(count.keySet().toArray()[num].toString()).child("recentMsg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                                                                    @Override
+                                                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                                                                                        Long msgTime = dataSnapshot.getValue(Long.class);
+                                                                                                        if (msgTime != null) {
+
+                                                                                                            epochTimeToGrp.put(msgTime, grpName);
+                                                                                                            groupToLastMsg.put(grpName, lastMessage);
+
+
+                                                                                                        }
+
+                                                                                                    }
+
+                                                                                                    @Override
+                                                                                                    public void onCancelled(DatabaseError databaseError) {
+
+                                                                                                    }
+                                                                                                });
+
+                                                                                                /*
+
+                                                                                                GroupLayout group = new GroupLayout(grpName, lastMessage);
                                                                                                 groups.add(group);
                                                                                                 groupMember.put(grpName, true);
                                                                                                 groupToName.put(grpName, "group" + num);
                                                                                                 Log.i("groups", groups.toString());
                                                                                                 groupAdapter.notifyDataSetChanged();
+
+                                                                                                */
 
                                                                                             }
 
@@ -1233,14 +1327,22 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                             String grpName = dataSnapshot.getValue(String.class);
                                                                                             if (grpName != null) {
+                                                                                                epochTimeToGrp.put(0L, grpName);
+                                                                                                groupToLastMsg.put(grpName, "N/A");
+                                                                                                groupToEpoch.put(grpName, 0L);
 
-                                                                                                groupLayout group = new groupLayout(grpName, "N/A");
+
+
+                                                                                                /*
+
+                                                                                                GroupLayout group = new GroupLayout(grpName, lastMessage);
                                                                                                 groups.add(group);
                                                                                                 groupMember.put(grpName, true);
                                                                                                 groupToName.put(grpName, "group" + num);
                                                                                                 Log.i("groups", groups.toString());
                                                                                                 groupAdapter.notifyDataSetChanged();
 
+                                                                                                */
                                                                                             }
 
                                                                                         }
@@ -1289,9 +1391,37 @@ public class ChatsActivity extends AbstractActivity {
 
                                     if (i == count.keySet().size() - 1) {
 
-                                        groupAdapter.notifyDataSetChanged();
+                                        Handler handler = new Handler();
+                                        handler.postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Log.i("in Loop", String.valueOf(count.keySet().size()));
+                                                Log.i("epoch", String.valueOf(epochTimeToGrp.keySet().size()));
+
+                                                for (int num2 = 0; num2 < epochTimeToGrp.keySet().size(); num2++) {
+                                                    Log.i("count", String.valueOf(num2));
+
+                                                    String lastMessage = groupToLastMsg.get(epochTimeToGrp.get(epochTimeToGrp.keySet().toArray()[num2]));
+                                                    String groupName = epochTimeToGrp.get(epochTimeToGrp.keySet().toArray()[num2]);
+
+                                                    groupAdapter.notifyDataSetChanged();
+                                                    GroupLayout group = new GroupLayout(groupName, lastMessage);
+                                                    groups.add(group);
+                                                    groupMember.put(groupName, true);
+                                                    groupToName.put(groupName, "group" + num);
+                                                    Log.i("groups", groups.toString());
+                                                    groupAdapter.notifyDataSetChanged();
+
+                                                }
+                                            }
+                                        },1000);
+
+
+
+
 
                                     }
+
 
                                 }
 
@@ -1430,12 +1560,12 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
 
@@ -1443,7 +1573,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -1481,13 +1611,13 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
 
@@ -1495,7 +1625,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
 
 
@@ -1576,13 +1706,13 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
 
@@ -1590,7 +1720,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                             objects.add(chat);
 
 
@@ -1629,12 +1759,12 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
 
@@ -1642,7 +1772,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                             objects.add(chat);
 
 
@@ -1693,19 +1823,19 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                         if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                             objects.add(chat);
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                             objects.add(chat);
 
                                                                                         }
 
                                                                                     } else {
 
-                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                         objects.add(chat);
 
 
@@ -1826,19 +1956,19 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
 
                                                                                 }
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -1876,19 +2006,19 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
 
                                                                                 }
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
 
                                                                             }
@@ -1970,19 +2100,19 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                                 objects.add( chat);
 
                                                                                             }
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                             objects.add( chat);
 
 
@@ -2021,12 +2151,12 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
                                                                                             } else {
 
-                                                                                                chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                                 objects.add(chat);
 
 
@@ -2034,7 +2164,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                             objects.add( chat);
 
                                                                                         }
@@ -2084,13 +2214,13 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                         if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                             objects.add(chat);
 
 
                                                                                         } else {
 
-                                                                                            chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                            ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                             objects.add( chat);
 
 
@@ -2098,7 +2228,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                     } else {
 
-                                                                                        chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                        ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                         objects.add( chat);
 
                                                                                     }
@@ -2222,7 +2352,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -2234,7 +2364,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -2248,7 +2378,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "myMessage");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -2293,7 +2423,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                    chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -2305,7 +2435,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                                 } else {
 
-                                                                                    chatBubble chat = new chatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                    ChatBubble chat = new ChatBubble("***Censored Message***", "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                     objects.add(chat);
                                                                                     customAdapter.notifyDataSetChanged();
                                                                                     listView.post(new Runnable() {
@@ -2319,7 +2449,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "From: " + extract + "\nAt: " + time, "notMyMessage");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -2366,7 +2496,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             if (filterCheck(finalM.toLowerCase())) {
 
-                                                                                chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                                ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -2378,7 +2508,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                             } else {
 
-                                                                                chatBubble chat = new chatBubble("***Censored Message***", "At: " + time, "server");
+                                                                                ChatBubble chat = new ChatBubble("***Censored Message***", "At: " + time, "server");
                                                                                 objects.add(chat);
                                                                                 customAdapter.notifyDataSetChanged();
                                                                                 listView.post(new Runnable() {
@@ -2392,7 +2522,7 @@ public class ChatsActivity extends AbstractActivity {
 
                                                                         } else {
 
-                                                                            chatBubble chat = new chatBubble(finalM, "At: " + time, "server");
+                                                                            ChatBubble chat = new ChatBubble(finalM, "At: " + time, "server");
                                                                             objects.add(chat);
                                                                             customAdapter.notifyDataSetChanged();
                                                                             listView.post(new Runnable() {
@@ -2485,6 +2615,46 @@ public class ChatsActivity extends AbstractActivity {
 
         }
         
+    }
+
+    public void Chats() {
+
+        mAdView.setVisibility(View.VISIBLE);
+        fab.show();
+        tab = 1;
+        fabPassJ.hide();
+
+        RelativeLayout.LayoutParams params= new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);
+        params.addRule(RelativeLayout.ABOVE, R.id.adView);
+        cl.setLayoutParams(params);
+
+    }
+
+    class ReverseComparator implements Comparator<Long> {
+
+        @Override
+        public int compare(Long aLong, Long t1) {
+            return t1.compareTo(aLong);
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1) {
+            if(resultCode == RESULT_OK) {
+                Log.i("got", "y");
+                Long strEditText = data.getLongExtra("epochRecent", 0L);
+                if (strEditText != 0 && strEditText != null) {
+
+                    Log.i("epoch", String.valueOf(strEditText));
+
+                    epochTimeToGrp.remove(strEditText);
+                    notifReturn = true;
+
+                }
+            }
+        }
     }
 
 }

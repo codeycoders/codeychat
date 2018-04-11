@@ -1,7 +1,6 @@
 package com.tejasmehta.codeychat;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,7 +17,7 @@ import java.util.ArrayList;
 public class CustomAdapter extends BaseAdapter {
 
     private LayoutInflater inflater;
-    private ArrayList<chatBubble> objects;
+    private ArrayList<ChatBubble> objects;
     int layout;
 
     private class ViewHolder {
@@ -26,7 +25,7 @@ public class CustomAdapter extends BaseAdapter {
         TextView date;
     }
 
-    public CustomAdapter(Context context, ArrayList<chatBubble> objects) {
+    public CustomAdapter(Context context, ArrayList<ChatBubble> objects) {
         inflater = LayoutInflater.from(context);
         this.objects = objects;
     }
@@ -35,7 +34,7 @@ public class CustomAdapter extends BaseAdapter {
         return objects.size();
     }
 
-    public chatBubble getItem(int position) {
+    public ChatBubble getItem(int position) {
         return objects.get(position);
     }
 
@@ -73,7 +72,7 @@ public class CustomAdapter extends BaseAdapter {
         ViewHolder holder = null;
 
         int layoutResource; // determined by view type
-        chatBubble ChatBubble = getItem(position);
+        ChatBubble ChatBubble = getItem(position);
 
         if (ChatBubble.MsgType().equals("myMessage")) {
             layoutResource = R.layout.right_bubble;

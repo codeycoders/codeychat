@@ -43,12 +43,19 @@
             android:value="channel-01" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/chat_notif_round_ad" />
+            android:resource="@drawable/chatty" />
 
         <activity android:name=".UserGroupSeachActivity" />
         <activity android:name=".FinalGroupChooseActivity" />
         <activity android:name=".ChatsViewActivity" />
-        <activity android:name=".PassJoin"></activity>
+        <activity android:name=".PassJoin" />
+
+        <receiver
+            android:name=".NotificationBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <activity android:name=".ChatCreateActivity"></activity>
     </application>
 
 </manifest>
