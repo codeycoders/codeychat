@@ -142,6 +142,7 @@ public class ChatCreateActivity extends AppCompatActivity {
                 Intent newAct = new Intent(getApplicationContext(), ChatsViewActivity.class);
                 newAct.putExtra("chatType", false);
                 newAct.putExtra("name", text.getText().toString());
+                newAct.putExtra("newCreate", true);
                 startActivity(newAct);
 
 

@@ -2,7 +2,9 @@ package com.tejasmehta.codeychat;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.InputType;
@@ -51,6 +53,8 @@ public class ChatsViewActivity extends AppCompatActivity {
     String notif;
     Long epochT;
     Boolean group;
+    String newGrp;
+    Boolean newChat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +114,60 @@ public class ChatsViewActivity extends AppCompatActivity {
         } else {
 
             name = getIntent().getExtras().get("name").toString();
+
+            if (getIntent().getExtras().getBoolean("newCreate")) {
+
+                newChat = getIntent().getExtras().getBoolean("newCreate");
+
+            } else {
+
+                newChat = false;
+
+            }
+
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(name);
+
+            if (mAuth.getCurrentUser() != null) {
+
+                String email = mAuth.getCurrentUser().getEmail().replace(".", ",");
+                mDatabase.child("users").child("c").child("emailToUsername").child(email).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                        String username = dataSnapshot.getValue(String.class);
+                        if (username != null) {
+
+                            mDatabase.child("chat").child("groups").child(name).child("recentMsg").addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                                    if (dataSnapshot.getValue(Long.class) != null) {
+
+                                        epochT = dataSnapshot.getValue(Long.class);
+
+                                    }
+
+                                }
+
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {
+
+                                }
+                            });
+
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+
+            }
+
 
 
         }
